@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-mod debug;
-mod game;
 mod ui;
 
 fn main() {
@@ -9,16 +7,16 @@ fn main() {
 
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
         primary_window: Some(Window {
-            title: "Terrain Grid".to_string(),
+            title: "UI".to_string(),
             ..default()
         }),
         ..default()
-    }))
-    .add_plugins(game::plugin)
-    .add_plugins(debug::plugin);
+    }));
 
     app.add_systems(Startup, camera_setup);
     app.add_systems(Update, exit_condition);
+
+    app.add_plugins(ui::plugin);
 
     app.run();
 }
@@ -32,6 +30,6 @@ fn exit_condition(
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Escape) {
-        app_exit_events.send(AppExit::Success);
+        app_exit_events.write(AppExit::Success);
     }
 }
