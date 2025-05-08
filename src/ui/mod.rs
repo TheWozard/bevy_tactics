@@ -1,4 +1,6 @@
-use bevy::{prelude::*, scene::ron::de};
+use bevy::prelude::*;
+
+mod popover;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_systems(Startup, setup);
@@ -6,7 +8,7 @@ pub fn plugin(app: &mut bevy::prelude::App) {
         Update,
         (ButtonState::state_change, ButtonState::tick).chain(),
     );
-    app.add_systems(Update, Popover::state_change);
+    app.add_plugins(popover::plugin);
 }
 
 const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
@@ -20,27 +22,63 @@ fn setup(mut commands: Commands, assets: Res<AssetServer>) {
             height: Val::Percent(100.0),
             align_items: AlignItems::Center,
             justify_content: JustifyContent::Center,
-            flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(10.0),
+            column_gap: Val::Px(10.0),
             ..default()
         },
         children![
-            button(&assets, "Button 1"),
-            button(&assets, "Button 2"),
-            button(&assets, "Button 3"),
+            (
+                Node {
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(10.0),
+                    ..default()
+                },
+                children![
+                    button(&assets, "Top", popover::Position::Top),
+                    button(&assets, "TopLeft", popover::Position::TopLeft),
+                    button(&assets, "TopRight", popover::Position::TopRight),
+                    button(&assets, "Bottom", popover::Position::Bottom),
+                    button(&assets, "BottomLeft", popover::Position::BottomLeft),
+                    button(&assets, "BottomRight", popover::Position::BottomRight),
+                ],
+            ),
+            (
+                Node {
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(10.0),
+                    ..default()
+                },
+                children![
+                    button(&assets, "Right", popover::Position::Right),
+                    button(&assets, "RightTop", popover::Position::RightTop),
+                    button(&assets, "RightBottom", popover::Position::RightBottom),
+                    button(&assets, "Left", popover::Position::Left),
+                    button(&assets, "LeftTop", popover::Position::LeftTop),
+                    button(&assets, "LeftBottom", popover::Position::LeftBottom),
+                ],
+            )
         ],
     ));
 }
 
-fn button(assets: &AssetServer, text: impl Into<String>) -> impl Bundle {
+fn button(
+    assets: &AssetServer,
+    text: impl Into<String>,
+    position: popover::Position,
+) -> impl Bundle {
     (
         ButtonState::default(),
         Button,
         Node {
-            width: Val::Px(150.0),
-            height: Val::Px(65.0),
+            min_width: Val::Px(250.0),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
+            padding: UiRect::all(Val::Px(10.0)),
             ..default()
         },
         BackgroundColor(NORMAL_BUTTON),
@@ -48,15 +86,12 @@ fn button(assets: &AssetServer, text: impl Into<String>) -> impl Bundle {
             Text::new(text),
             TextFont {
                 font: assets.load("fonts/FiraSans-Bold.ttf"),
-                font_size: 33.0,
+                font_size: 25.0,
                 ..default()
             },
             TextColor(Color::srgb(0.9, 0.9, 0.9)),
         )],
-        Popover {
-            spawn: content_a,
-            spawned: None,
-        },
+        popover::Popover::new(position, content_a),
     )
 }
 
@@ -130,154 +165,29 @@ impl ButtonState {
     }
 }
 
-#[derive(Component)]
-pub struct Popover {
-    spawn: fn(&mut Commands, &AssetServer, &PopoverDetails) -> Entity,
-    spawned: Option<Entity>,
-}
-
-impl Popover {
-    pub fn state_change(
-        mut commands: Commands,
-        assets: Res<AssetServer>,
-        mut interaction_query: Query<
-            (
-                &mut Popover,
-                &Interaction,
-                &ComputedNode,
-                &GlobalTransform,
-                &ZIndex,
-            ),
-            Changed<Interaction>,
-        >,
-    ) {
-        for (mut popover, interaction, node, transform, index) in &mut interaction_query {
-            match *interaction {
-                Interaction::Hovered | Interaction::Pressed => {
-                    if popover.spawned.is_none() {
-                        let entity = (popover.spawn)(
-                            &mut commands,
-                            &assets,
-                            &PopoverDetails {
-                                translation: transform.translation().truncate() / 2.,
-                                size: node.size / 4.,
-                                index: index.0,
-                                ..default()
-                            },
-                        );
-                        popover.spawned = Some(entity);
-                    }
-                }
-                Interaction::None => {
-                    if let Some(spawned) = popover.spawned {
-                        commands.entity(spawned).try_despawn();
-                        popover.spawned = None;
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn content_a(commands: &mut Commands, assets: &AssetServer, hover: &PopoverDetails) -> Entity {
-    content(commands, assets, hover, "Content A")
+fn content_a(commands: &mut Commands, assets: &AssetServer, hover: &popover::Details) -> Entity {
+    content(commands, assets, hover, "Lorem ipsum dolor sit amet")
 }
 
 fn content(
     commands: &mut Commands,
     assets: &AssetServer,
-    hover: &PopoverDetails,
+    hover: &popover::Details,
     text: impl Into<String>,
 ) -> Entity {
     commands
         .spawn((
-            hover.root(),
+            hover.bundle(),
+            BackgroundColor(HOVERED_BUTTON),
             children![(
-                hover.bundle(),
-                BackgroundColor(NORMAL_BUTTON),
-                children![(
-                    Text::new(text),
-                    TextFont {
-                        font: assets.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 33.0,
-                        ..default()
-                    },
-                    TextColor(Color::srgb(0.9, 0.9, 0.9)),
-                )],
+                Text::new(text),
+                TextFont {
+                    font: assets.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 33.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.9, 0.9, 0.9)),
             )],
         ))
         .id()
-}
-
-pub enum PopoverPosition {
-    Top,
-    Bottom,
-}
-
-// HoverPosition defines details about where the hover content should be placed.
-// Provides a bundle that can be used to position the content.
-pub struct PopoverDetails {
-    position: PopoverPosition,
-    translation: Vec2,
-    size: Vec2,
-    index: i32,
-}
-
-impl Default for PopoverDetails {
-    fn default() -> Self {
-        Self {
-            position: PopoverPosition::Top,
-            translation: Vec2::ZERO,
-            size: Vec2::ZERO,
-            index: 0,
-        }
-    }
-}
-
-impl PopoverDetails {
-    pub fn bundle(&self) -> impl Bundle {
-        (
-            self.node(),
-            ZIndex(self.index + 1),
-            GlobalZIndex(1), // TODO: This should become a constant.
-        )
-    }
-
-    pub fn root(&self) -> impl Bundle {
-        let (justify_content, align_items) = self.orientation();
-        (
-            Node {
-                display: Display::Flex,
-                width: Val::Vw(100.0),
-                height: Val::Vh(100.0),
-                justify_content,
-                align_items,
-                ..default()
-            },
-            GlobalZIndex(1), // TODO: This should become a constant.
-        )
-    }
-
-    fn node(&self) -> Node {
-        match self.position {
-            PopoverPosition::Bottom => Node {
-                // top: Val::Px(self.translation.y + self.size.y),
-                // left: Val::Px(self.translation.x - self.size.x),
-                padding: UiRect::all(Val::Px(10.0)), // TODO: This should be a constant.
-                ..default()
-            },
-            PopoverPosition::Top => Node {
-                bottom: Val::Px(self.translation.y + self.size.y),
-                padding: UiRect::all(Val::Px(10.0)), // TODO: This should be a constant.
-                ..default()
-            },
-        }
-    }
-
-    fn orientation(&self) -> (JustifyContent, AlignItems) {
-        match self.position {
-            PopoverPosition::Bottom => (JustifyContent::FlexStart, AlignItems::FlexStart),
-            PopoverPosition::Top => (JustifyContent::FlexStart, AlignItems::FlexEnd),
-        }
-    }
 }
