@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::ui::FocusPolicy;
 
 mod popover;
 
@@ -91,7 +92,7 @@ fn button(
             },
             TextColor(Color::srgb(0.9, 0.9, 0.9)),
         )],
-        popover::Popover::new(position, content_a),
+        popover::Details::default().popover(position, content_a),
     )
 }
 
@@ -178,16 +179,54 @@ fn content(
     commands
         .spawn((
             hover.bundle(),
-            BackgroundColor(HOVERED_BUTTON),
-            children![(
-                Text::new(text),
-                TextFont {
-                    font: assets.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 33.0,
-                    ..default()
-                },
-                TextColor(Color::srgb(0.9, 0.9, 0.9)),
-            )],
+            BackgroundColor(color(hover.depth())),
+            children![
+                (
+                    Node {
+                        padding: UiRect::right(Val::Px(10.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    children![(
+                        Text::new(text),
+                        TextFont {
+                            font: assets.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 10.0,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                    )],
+                ),
+                (
+                    Button,
+                    BackgroundColor(NORMAL_BUTTON),
+                    hover.popover(hover.position().flip(), content_a),
+                    Node {
+                        padding: UiRect::all(Val::Px(10.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    FocusPolicy::Pass,
+                    children![(
+                        Text::new("More"),
+                        TextFont {
+                            font: assets.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 10.0,
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                    )],
+                )
+            ],
         ))
         .id()
+}
+
+fn color(index: i32) -> Color {
+    match index % 2 {
+        0 => Color::srgb(0.25, 0.25, 0.25),
+        _ => Color::srgb(0.35, 0.35, 0.35),
+    }
 }
