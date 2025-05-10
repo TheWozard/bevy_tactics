@@ -192,7 +192,7 @@ fn content(
                         Text::new(text),
                         TextFont {
                             font: assets.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 10.0,
+                            font_size: 33.0,
                             ..default()
                         },
                         TextColor(Color::srgb(0.9, 0.9, 0.9)),
@@ -201,7 +201,7 @@ fn content(
                 (
                     Button,
                     BackgroundColor(NORMAL_BUTTON),
-                    hover.popover(hover.position().flip(), content_a),
+                    hover.popover(hover.position(), content_a),
                     Node {
                         padding: UiRect::all(Val::Px(10.0)),
                         justify_content: JustifyContent::Center,
@@ -213,7 +213,7 @@ fn content(
                         Text::new("More"),
                         TextFont {
                             font: assets.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 10.0,
+                            font_size: 33.0,
                             ..default()
                         },
                         TextColor(Color::srgb(0.9, 0.9, 0.9)),

@@ -1,9 +1,11 @@
-use bevy::prelude::*;
+use bevy::render::{camera, view};
 use bevy::ui::FocusPolicy;
+use bevy::{log, prelude::*, transform};
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_systems(Update, (Popover::state_change, Popover::tick).chain());
     app.add_systems(Update, (Cleanup::mark, Cleanup::sweep).chain());
+    app.add_systems(Update, KeepNodeInWindow::system);
 }
 
 // PopoverPosition defines the position of the popover relative to the hovered content.
@@ -147,6 +149,8 @@ impl Details {
             FocusPolicy::Block,
             ZIndex(self.index + 1),
             GlobalZIndex(1), // TODO: This should become a constant.
+            KeepNodeInWindow,
+            Visibility::Hidden,
         )
     }
 
@@ -308,6 +312,163 @@ impl Cleanup {
                         }
                     }
                     next = parent.0;
+                }
+            }
+        }
+    }
+}
+
+// KeepNodeInWindow is a component that keeps a node within the bounds of its camera.
+#[derive(Component)]
+#[require(Node)]
+pub struct KeepNodeInWindow;
+
+impl KeepNodeInWindow {
+    fn system(
+        cameras: Query<&camera::Camera>,
+        mut query: Query<
+            (
+                &mut Node,
+                &GlobalTransform,
+                &ComputedNode,
+                &ComputedNodeTarget,
+                Option<&mut Visibility>,
+            ),
+            (With<KeepNodeInWindow>, Changed<ComputedNode>),
+        >,
+    ) {
+        for (mut node, global, computed, target, visibility) in &mut query {
+            // Load Camera Details.
+            let camera = cameras.get(target.camera().unwrap()).unwrap();
+            let viewport = camera.physical_viewport_size().unwrap().as_vec2();
+            let scale = camera.target_scaling_factor().unwrap();
+
+            // Calculate the amount of offset needed to keep the node in the viewport.
+            let location = global.translation().truncate();
+            let size = computed.size / 2.;
+            let mut offset = Vec2::new(0., 0.);
+            if location.x < size.x {
+                offset.x = size.x - location.x;
+            } else if location.x > viewport.x - size.x {
+                offset.x = location.x - (viewport.x - size.x);
+            }
+            if location.y < size.y {
+                offset.y = size.y - location.y;
+            } else if location.y > viewport.y - size.y {
+                offset.y = location.y - (viewport.y - size.y);
+            }
+
+            // Move the node if an offset is needed.
+            if offset.x != 0. {
+                match (node.left, node.right) {
+                    (Val::Auto, Val::Auto) => {
+                        if offset.x > 0. {
+                            node.right = Val::Px(0.);
+                        } else {
+                            node.left = Val::Px(0.);
+                        }
+                    }
+                    (_, _) => {
+                        (node.left, node.right) = (node.right, node.left);
+                    }
+                }
+            }
+            if offset.y != 0. {
+                match (node.top, node.bottom) {
+                    (Val::Auto, Val::Auto) => {
+                        if offset.y > 0. {
+                            node.top = Val::Px(0.);
+                        } else {
+                            node.bottom = Val::Px(0.);
+                        }
+                    }
+                    (_, _) => {
+                        (node.top, node.bottom) = (node.bottom, node.top);
+                    }
+                }
+            }
+
+            // Node might be hidden to hide flickering.
+            if let Some(mut visibility) = visibility {
+                if *visibility == Visibility::Hidden {
+                    *visibility = Visibility::Inherited;
+                }
+            }
+        }
+    }
+}
+
+// IntentionalInteraction is a component that indicates whether the user is intentionally interacting with the UI element.
+// This is used to prevent flickering when the mouse is moved quickly over the UI. Or to make it easier to move from a small button to a popover.
+#[derive(Component)]
+pub enum IntentionalInteraction {
+    None,
+    Hovered,
+}
+
+impl IntentionalInteraction {
+    pub fn flip(&mut self) {
+        match self {
+            IntentionalInteraction::None => *self = IntentionalInteraction::Hovered,
+            IntentionalInteraction::Hovered => *self = IntentionalInteraction::None,
+        }
+    }
+}
+
+#[derive(Component)]
+#[require(IntentionalInteraction::None)]
+pub struct IntentionalInteractionTimer {
+    timer: Timer,
+}
+
+impl Default for IntentionalInteractionTimer {
+    fn default() -> Self {
+        Self::new(0.2)
+    }
+}
+
+impl IntentionalInteractionTimer {
+    pub fn new(time: f32) -> Self {
+        let mut timer = Timer::from_seconds(time, TimerMode::Once);
+        timer.set_elapsed(timer.duration());
+        Self { timer }
+    }
+
+    pub fn tick(
+        mut query: Query<(
+            &mut IntentionalInteractionTimer,
+            &mut IntentionalInteraction,
+        )>,
+        time: Res<Time>,
+    ) {
+        for (mut timer, mut interaction) in &mut query {
+            timer.timer.tick(time.delta());
+            if timer.timer.just_finished() {
+                interaction.flip();
+            }
+        }
+    }
+
+    pub fn update(
+        mut query: Query<
+            (
+                &mut IntentionalInteractionTimer,
+                &Interaction,
+                &IntentionalInteraction,
+            ),
+            Changed<Interaction>,
+        >,
+    ) {
+        for (mut timer, interaction, intentional) in &mut query {
+            match (interaction, intentional) {
+                (Interaction::Hovered, IntentionalInteraction::None)
+                | (Interaction::Pressed, IntentionalInteraction::None)
+                | (Interaction::None, IntentionalInteraction::Hovered) => {
+                    timer.timer.unpause();z
+                    timer.timer.reset();
+                }
+                (_, _) => {
+                    timer.timer.pause();
                 }
             }
         }
