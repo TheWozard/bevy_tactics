@@ -1,15 +1,26 @@
-use bevy::render::{camera, view};
+use bevy::prelude::*;
+use bevy::render::camera;
 use bevy::ui::FocusPolicy;
-use bevy::{log, prelude::*, transform};
 
 pub fn plugin(app: &mut bevy::prelude::App) {
-    app.add_systems(Update, (Popover::state_change, Popover::tick).chain());
-    app.add_systems(Update, (Cleanup::mark, Cleanup::sweep).chain());
+    app.add_systems(Update, Popover::state_change);
+    app.add_systems(
+        Update,
+        (PopoverContent::mark, PopoverContent::sweep).chain(),
+    );
     app.add_systems(Update, KeepNodeInWindow::system);
+    app.add_systems(
+        Update,
+        (
+            IntentionalInteractionTimer::update,
+            IntentionalInteractionTimer::tick,
+        )
+            .chain(),
+    );
 }
 
 // PopoverPosition defines the position of the popover relative to the hovered content.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Position {
     Top,
     TopLeft,
@@ -31,34 +42,14 @@ impl Default for Position {
     }
 }
 
-impl Position {
-    pub fn flip(&self) -> Self {
-        match self {
-            Position::Top => Position::Bottom,
-            Position::TopLeft => Position::BottomRight,
-            Position::TopRight => Position::BottomLeft,
-            Position::Bottom => Position::Top,
-            Position::BottomLeft => Position::TopRight,
-            Position::BottomRight => Position::TopLeft,
-            Position::Right => Position::Left,
-            Position::RightTop => Position::LeftBottom,
-            Position::RightBottom => Position::LeftTop,
-            Position::Left => Position::Right,
-            Position::LeftTop => Position::RightBottom,
-            Position::LeftBottom => Position::RightTop,
-        }
-    }
-}
-
 // Popover is a component that defines a popover UI element. Popovers can be positioned relative to other UI elements.
 // Popover has a built in delay before it is shown, to prevent flickering when the moving the mouse quickly over the UI.
-#[derive(Component)]
-#[require(Interaction)]
+#[derive(Component, Debug)]
+#[require(Interaction, IntentionalInteraction::None)]
 pub struct Popover {
     position: Position,
     spawn: fn(&mut Commands, &AssetServer, &Details) -> Entity,
     spawned: Option<Entity>,
-    delay: Timer,
     depth: i32,
 }
 
@@ -68,49 +59,38 @@ impl Popover {
             position,
             spawn,
             spawned: None,
-            delay: Timer::from_seconds(0.2, TimerMode::Once),
             depth: 0,
-        }
-    }
-
-    fn tick(
-        mut commands: Commands,
-        assets: Res<AssetServer>,
-        time: Res<Time>,
-        mut popover: Query<(Entity, &mut Popover, &ComputedNode)>,
-    ) {
-        for (parent, mut popover, node) in &mut popover {
-            popover.delay.tick(time.delta());
-            if popover.delay.just_finished() && popover.spawned.is_none() {
-                let entity = (popover.spawn)(
-                    &mut commands,
-                    &assets,
-                    &Details {
-                        position: popover.position,
-                        size: node.size / 2.,
-                        index: node.stack_index as i32,
-                        depth: popover.depth + 1,
-                    },
-                );
-                popover.spawned = Some(entity);
-                commands.entity(parent).add_related::<ChildOf>(&[entity]);
-            }
         }
     }
 
     fn state_change(
         mut commands: Commands,
-        mut interaction_query: Query<(&mut Popover, &Interaction), Changed<Interaction>>,
+        assets: Res<AssetServer>,
+        mut interaction_query: Query<
+            (Entity, &mut Popover, &ComputedNode, &IntentionalInteraction),
+            Changed<IntentionalInteraction>,
+        >,
         mut child_query: Query<&Interaction>,
     ) {
-        for (mut popover, interaction) in &mut interaction_query {
+        for (parent, mut popover, node, interaction) in &mut interaction_query {
             match *interaction {
-                Interaction::Hovered | Interaction::Pressed => {
-                    popover.delay.unpause();
+                IntentionalInteraction::Hovered => {
+                    if popover.spawned.is_none() {
+                        let entity = (popover.spawn)(
+                            &mut commands,
+                            &assets,
+                            &Details {
+                                position: popover.position,
+                                size: node.size / 2.,
+                                index: node.stack_index as i32,
+                                depth: popover.depth + 1,
+                            },
+                        );
+                        popover.spawned = Some(entity);
+                        commands.entity(parent).add_related::<ChildOf>(&[entity]);
+                    }
                 }
-                Interaction::None => {
-                    popover.delay.pause();
-                    popover.delay.reset();
+                IntentionalInteraction::None => {
                     if let Some(entity) = popover.spawned {
                         if let Ok(interaction) = child_query.get_mut(entity) {
                             if interaction == &Interaction::None {
@@ -145,7 +125,7 @@ impl Details {
     pub fn bundle(&self) -> impl Bundle {
         (
             self.node(),
-            Cleanup::default(),
+            PopoverContent::default(),
             FocusPolicy::Block,
             ZIndex(self.index + 1),
             GlobalZIndex(1), // TODO: This should become a constant.
@@ -245,24 +225,25 @@ impl Details {
     }
 }
 
-#[derive(Component, Default)]
-#[require(Interaction)]
-struct Cleanup {
+// PopoverContent is a component that handles cleanup of popover contents.
+#[derive(Component, Default, Debug)]
+#[require(Interaction::None, IntentionalInteraction::None)]
+struct PopoverContent {
     ignore: bool,
 }
 
-impl Cleanup {
+impl PopoverContent {
     pub fn sweep(
         mut commands: Commands,
         mut query: Query<
-            (&mut Cleanup, &ChildOf, &Interaction),
-            (Changed<Interaction>, With<Cleanup>),
+            (&mut PopoverContent, &ChildOf, &IntentionalInteraction),
+            (Changed<IntentionalInteraction>, With<PopoverContent>),
         >,
         mut parent_query: Query<(&ChildOf, Option<&mut Popover>, Option<&Interaction>)>,
     ) {
         for (mut cleanup, parent, interaction) in &mut query {
-            match (cleanup.ignore, *interaction) {
-                (false, Interaction::None) => {
+            match (cleanup.ignore, interaction) {
+                (false, IntentionalInteraction::None) => {
                     // Cleanup parents.
                     let mut next = parent.0;
                     // Traverse the hierarchy to find the highest parent that is not protected or focused.
@@ -290,37 +271,38 @@ impl Cleanup {
     }
 
     pub fn mark(
-        mut query: Query<(&ChildOf, &Interaction), (Changed<Interaction>, With<Cleanup>)>,
-        mut parent_query: Query<(&ChildOf, Option<&mut Cleanup>, Option<&Popover>)>,
+        mut query: Query<
+            (Option<&ChildOf>, &Interaction),
+            (Changed<Interaction>, With<PopoverContent>),
+        >,
+        mut parent_query: Query<(&ChildOf, Option<&mut PopoverContent>, Option<&Popover>)>,
     ) {
         for (parent, interaction) in &mut query {
-            if interaction != &Interaction::None {
-                let mut next = parent.0;
-                // Traverse the hierarchy to mark all unmarked parents as ignored.
-                while let Ok((parent, cleanup, popover)) = parent_query.get_mut(next) {
-                    if let Some(mut cleanup) = cleanup {
-                        if cleanup.ignore {
-                            return;
-                        } else {
-                            cleanup.ignore = true;
-                        }
-                    }
-                    if let Some(popover) = popover {
-                        // To prevent traversing the whole hierarchy, we stop if we find a root popover.
-                        if popover.depth == 0 {
-                            return;
-                        }
-                    }
-                    next = parent.0;
+            if parent.is_none() {
+                continue;
+            }
+            let mut next = parent.unwrap().0;
+            // Traverse the hierarchy to mark all unmarked parents as ignored.
+            while let Ok((parent, cleanup, popover)) = parent_query.get_mut(next) {
+                if let Some(mut cleanup) = cleanup {
+                    cleanup.ignore = *interaction != Interaction::None;
                 }
+                if let Some(popover) = popover {
+                    // To prevent traversing the whole hierarchy, we stop if we find a root popover.
+                    if popover.depth == 0 {
+                        break;
+                    }
+                }
+                next = parent.0;
             }
         }
     }
 }
 
 // KeepNodeInWindow is a component that keeps a node within the bounds of its camera.
+// This should be spawned with Visibility::Hidden to prevent flickering.
 #[derive(Component)]
-#[require(Node)]
+#[require(Node, Visibility::Hidden)]
 pub struct KeepNodeInWindow;
 
 impl KeepNodeInWindow {
@@ -341,7 +323,6 @@ impl KeepNodeInWindow {
             // Load Camera Details.
             let camera = cameras.get(target.camera().unwrap()).unwrap();
             let viewport = camera.physical_viewport_size().unwrap().as_vec2();
-            let scale = camera.target_scaling_factor().unwrap();
 
             // Calculate the amount of offset needed to keep the node in the viewport.
             let location = global.translation().truncate();
@@ -401,13 +382,14 @@ impl KeepNodeInWindow {
 // IntentionalInteraction is a component that indicates whether the user is intentionally interacting with the UI element.
 // This is used to prevent flickering when the mouse is moved quickly over the UI. Or to make it easier to move from a small button to a popover.
 #[derive(Component)]
+#[require(IntentionalInteractionTimer, Interaction::None)]
 pub enum IntentionalInteraction {
     None,
     Hovered,
 }
 
 impl IntentionalInteraction {
-    pub fn flip(&mut self) {
+    pub fn invert(&mut self) {
         match self {
             IntentionalInteraction::None => *self = IntentionalInteraction::Hovered,
             IntentionalInteraction::Hovered => *self = IntentionalInteraction::None,
@@ -415,15 +397,15 @@ impl IntentionalInteraction {
     }
 }
 
+// IntentionalInteractionTimer is a component that provides a timer to control the intentional interaction state.
 #[derive(Component)]
-#[require(IntentionalInteraction::None)]
 pub struct IntentionalInteractionTimer {
     timer: Timer,
 }
 
 impl Default for IntentionalInteractionTimer {
     fn default() -> Self {
-        Self::new(0.2)
+        Self::new(0.15)
     }
 }
 
@@ -444,7 +426,7 @@ impl IntentionalInteractionTimer {
         for (mut timer, mut interaction) in &mut query {
             timer.timer.tick(time.delta());
             if timer.timer.just_finished() {
-                interaction.flip();
+                interaction.invert();
             }
         }
     }
@@ -464,7 +446,7 @@ impl IntentionalInteractionTimer {
                 (Interaction::Hovered, IntentionalInteraction::None)
                 | (Interaction::Pressed, IntentionalInteraction::None)
                 | (Interaction::None, IntentionalInteraction::Hovered) => {
-                    timer.timer.unpause();z
+                    timer.timer.unpause();
                     timer.timer.reset();
                 }
                 (_, _) => {
