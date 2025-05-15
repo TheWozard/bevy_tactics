@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 use bevy::ui::FocusPolicy;
+use rand::prelude::*;
 
+mod item;
+mod material;
 mod popover;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
@@ -10,11 +13,12 @@ pub fn plugin(app: &mut bevy::prelude::App) {
         (ButtonState::state_change, ButtonState::tick).chain(),
     );
     app.add_plugins(popover::plugin);
+    app.add_plugins(item::plugin);
+    app.add_plugins(material::plugin);
 }
 
 const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
-const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
+const PRESSED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
 
 fn setup(mut commands: Commands, assets: Res<AssetServer>) {
     commands.spawn((
@@ -27,51 +31,55 @@ fn setup(mut commands: Commands, assets: Res<AssetServer>) {
             ..default()
         },
         children![
-            (
-                Node {
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(10.0),
+            item::Item {
+                material: material::Material {
+                    material: material::Type::None,
+                    texture: assets.load("images/weapon_firesword.png"),
                     ..default()
                 },
-                children![
-                    button(&assets, "Top", popover::Position::Top),
-                    button(&assets, "TopLeft", popover::Position::TopLeft),
-                    button(&assets, "TopRight", popover::Position::TopRight),
-                    button(&assets, "Bottom", popover::Position::Bottom),
-                    button(&assets, "BottomLeft", popover::Position::BottomLeft),
-                    button(&assets, "BottomRight", popover::Position::BottomRight),
-                ],
-            ),
-            (
-                Node {
-                    height: Val::Percent(100.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(10.0),
+            }
+            .bundle(),
+            item::Item {
+                material: material::Material {
+                    material: material::Type::Glint,
+                    texture: assets.load("images/weapon_sword.png"),
+                    specular_map: Some(assets.load("images/weapon_sword_specular_map.png")),
                     ..default()
                 },
-                children![
-                    button(&assets, "Right", popover::Position::Right),
-                    button(&assets, "RightTop", popover::Position::RightTop),
-                    button(&assets, "RightBottom", popover::Position::RightBottom),
-                    button(&assets, "Left", popover::Position::Left),
-                    button(&assets, "LeftTop", popover::Position::LeftTop),
-                    button(&assets, "LeftBottom", popover::Position::LeftBottom),
-                ],
-            )
+            }
+            .bundle(),
+            item::Item {
+                material: material::Material {
+                    material: material::Type::Distortion,
+                    direction: Vec2::new(-1.0, 1.0),
+                    texture: assets.load("images/weapon_firesword.png"),
+                    specular_map: Some(assets.load("images/weapon_firesword_distortion_map.png")),
+                    ..default()
+                },
+            }
+            .bundle(),
+            item::Item {
+                material: material::Material {
+                    material: material::Type::Distortion,
+                    direction: Vec2::new(0.0, 1.0),
+                    texture: assets.load("images/weapon_potion.png"),
+                    specular_map: Some(assets.load("images/weapon_potion_distortion_map.png")),
+                    ..default()
+                },
+            }
+            .bundle(),
         ],
     ));
 }
 
-fn button(
-    assets: &AssetServer,
-    text: impl Into<String>,
-    position: popover::Position,
-) -> impl Bundle {
+const SIZE: Val = Val::Px(32.0);
+const PADDING: UiRect = UiRect::horizontal(Val::Px(10.0));
+
+const FONT_FILE: &str = "fonts/Nunito-Regular.ttf";
+const FONT_SCALE: f32 = 32.0;
+const FONT_COLOR: Color = Color::WHITE;
+
+fn button(assets: &AssetServer, position: popover::Position) -> impl Bundle {
     (
         ButtonState::default(),
         Button,
@@ -82,18 +90,75 @@ fn button(
             padding: UiRect::all(Val::Px(10.0)),
             ..default()
         },
+        BorderRadius::all(Val::Px(5.0)),
         BackgroundColor(NORMAL_BUTTON),
-        children![(
-            Text::new(text),
-            TextFont {
-                font: assets.load("fonts/FiraSans-Bold.ttf"),
-                font_size: 25.0,
-                ..default()
-            },
-            TextColor(Color::srgb(0.9, 0.9, 0.9)),
-        )],
+        children![
+            (
+                Text::new("Example"),
+                TextFont {
+                    font: assets.load(FONT_FILE),
+                    font_size: FONT_SCALE,
+                    ..default()
+                },
+                Node {
+                    padding: PADDING,
+                    ..default()
+                },
+                TextColor(FONT_COLOR),
+            ),
+            (
+                ImageNode::new(assets.load("images/icon_diamond.png")).with_color(randomColor()),
+                Node {
+                    width: SIZE,
+                    height: SIZE,
+                    padding: PADDING,
+                    ..default()
+                },
+            ),
+            (
+                ImageNode::new(assets.load("images/icon_fire.png")).with_color(randomColor()),
+                Node {
+                    width: SIZE,
+                    height: SIZE,
+                    padding: PADDING,
+                    ..default()
+                },
+            ),
+            (
+                ImageNode::new(assets.load("images/icon_hourglass.png")).with_color(randomColor()),
+                Node {
+                    width: SIZE,
+                    height: SIZE,
+                    padding: PADDING,
+                    ..default()
+                },
+            ),
+            (
+                ImageNode::new(assets.load("images/icon_shield.png")).with_color(randomColor()),
+                Node {
+                    width: SIZE,
+                    height: SIZE,
+                    padding: PADDING,
+                    ..default()
+                },
+            ),
+            (
+                ImageNode::new(assets.load("images/icon_ice.png")).with_color(randomColor()),
+                Node {
+                    width: SIZE,
+                    height: SIZE,
+                    padding: PADDING,
+                    ..default()
+                },
+            ),
+        ],
         popover::Details::default().popover(position, content_a),
     )
+}
+
+fn randomColor() -> Color {
+    let mut rng = rand::rng();
+    Color::hsl(rng.random_range(0.0..360.0), 1., 0.6)
 }
 
 #[derive(PartialEq)]
@@ -191,11 +256,11 @@ fn content(
                     children![(
                         Text::new(text),
                         TextFont {
-                            font: assets.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 33.0,
+                            font: assets.load(FONT_FILE),
+                            font_size: FONT_SCALE,
                             ..default()
                         },
-                        TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                        TextColor(FONT_COLOR),
                     )],
                 ),
                 (
@@ -212,11 +277,11 @@ fn content(
                     children![(
                         Text::new("More"),
                         TextFont {
-                            font: assets.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 33.0,
+                            font: assets.load(FONT_FILE),
+                            font_size: FONT_SCALE,
                             ..default()
                         },
-                        TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                        TextColor(FONT_COLOR),
                     )],
                 )
             ],

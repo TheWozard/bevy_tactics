@@ -1,6 +1,6 @@
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
-
-mod ui;
+use bevy_simple::ui;
 
 fn main() {
     let mut app = App::new();
@@ -17,6 +17,13 @@ fn main() {
     app.add_systems(Update, exit_condition);
 
     app.add_plugins(ui::plugin);
+
+    app.add_plugins(FrameTimeDiagnosticsPlugin::default());
+    #[cfg(debug_assertions)] // debug/dev builds only
+    {
+        use bevy::diagnostic::LogDiagnosticsPlugin;
+        app.add_plugins(LogDiagnosticsPlugin::default());
+    }
 
     app.run();
 }

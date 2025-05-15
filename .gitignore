@@ -1,4 +1,6 @@
 .vscode
+.DS_Store
 
 /target
-/assets
+/assets/fonts
+/assets/images

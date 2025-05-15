@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::render::camera;
-use bevy::ui::FocusPolicy;
+use bevy::ui::*;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_systems(Update, Popover::state_change);
@@ -8,14 +8,15 @@ pub fn plugin(app: &mut bevy::prelude::App) {
         Update,
         (PopoverContent::mark, PopoverContent::sweep).chain(),
     );
-    app.add_systems(Update, KeepNodeInWindow::system);
+    app.add_systems(PreUpdate, KeepNodeInWindow::system);
     app.add_systems(
-        Update,
+        PreUpdate,
         (
             IntentionalInteractionTimer::update,
             IntentionalInteractionTimer::tick,
         )
-            .chain(),
+            .chain()
+            .after(ui_focus_system),
     );
 }
 
