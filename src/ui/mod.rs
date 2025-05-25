@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use bevy::ui::FocusPolicy;
-use rand;
+// use bevy::ui::FocusPolicy;
+// use rand;
 
 mod item;
 mod material;
@@ -12,7 +12,7 @@ pub fn plugin(app: &mut bevy::prelude::App) {
         Update,
         (ButtonState::state_change, ButtonState::tick).chain(),
     );
-    app.add_plugins(popover::plugin);
+    // app.add_plugins(popover::plugin);
     app.add_plugins(item::plugin);
     app.add_plugins(material::plugin);
 }
@@ -82,93 +82,93 @@ fn setup(mut commands: Commands, assets: Res<AssetServer>) {
     ));
 }
 
-const SIZE: Val = Val::Px(32.0);
-const PADDING: UiRect = UiRect::horizontal(Val::Px(10.0));
+// const SIZE: Val = Val::Px(32.0);
+// const PADDING: UiRect = UiRect::horizontal(Val::Px(10.0));
 
-const FONT_FILE: &str = "fonts/Nunito-Regular.ttf";
-const FONT_SCALE: f32 = 32.0;
-const FONT_COLOR: Color = Color::WHITE;
+// const FONT_FILE: &str = "fonts/Nunito-Regular.ttf";
+// const FONT_SCALE: f32 = 32.0;
+// const FONT_COLOR: Color = Color::WHITE;
 
-fn button(assets: &AssetServer, position: popover::Position) -> impl Bundle {
-    (
-        ButtonState::default(),
-        Button,
-        Node {
-            min_width: Val::Px(250.0),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            padding: UiRect::all(Val::Px(10.0)),
-            ..default()
-        },
-        BorderRadius::all(Val::Px(5.0)),
-        BackgroundColor(NORMAL_BUTTON),
-        children![
-            (
-                Text::new("Example"),
-                TextFont {
-                    font: assets.load(FONT_FILE),
-                    font_size: FONT_SCALE,
-                    ..default()
-                },
-                Node {
-                    padding: PADDING,
-                    ..default()
-                },
-                TextColor(FONT_COLOR),
-            ),
-            (
-                ImageNode::new(assets.load("images/icon_diamond.png")).with_color(randomColor()),
-                Node {
-                    width: SIZE,
-                    height: SIZE,
-                    padding: PADDING,
-                    ..default()
-                },
-            ),
-            (
-                ImageNode::new(assets.load("images/icon_fire.png")).with_color(randomColor()),
-                Node {
-                    width: SIZE,
-                    height: SIZE,
-                    padding: PADDING,
-                    ..default()
-                },
-            ),
-            (
-                ImageNode::new(assets.load("images/icon_hourglass.png")).with_color(randomColor()),
-                Node {
-                    width: SIZE,
-                    height: SIZE,
-                    padding: PADDING,
-                    ..default()
-                },
-            ),
-            (
-                ImageNode::new(assets.load("images/icon_shield.png")).with_color(randomColor()),
-                Node {
-                    width: SIZE,
-                    height: SIZE,
-                    padding: PADDING,
-                    ..default()
-                },
-            ),
-            (
-                ImageNode::new(assets.load("images/icon_ice.png")).with_color(randomColor()),
-                Node {
-                    width: SIZE,
-                    height: SIZE,
-                    padding: PADDING,
-                    ..default()
-                },
-            ),
-        ],
-        popover::Details::default().popover(position, content_a),
-    )
-}
+// fn button(assets: &AssetServer, position: popover::Position) -> impl Bundle {
+//     (
+//         ButtonState::default(),
+//         Button,
+//         Node {
+//             min_width: Val::Px(250.0),
+//             justify_content: JustifyContent::Center,
+//             align_items: AlignItems::Center,
+//             padding: UiRect::all(Val::Px(10.0)),
+//             ..default()
+//         },
+//         BorderRadius::all(Val::Px(5.0)),
+//         BackgroundColor(NORMAL_BUTTON),
+//         children![
+//             (
+//                 Text::new("Example"),
+//                 TextFont {
+//                     font: assets.load(FONT_FILE),
+//                     font_size: FONT_SCALE,
+//                     ..default()
+//                 },
+//                 Node {
+//                     padding: PADDING,
+//                     ..default()
+//                 },
+//                 TextColor(FONT_COLOR),
+//             ),
+//             (
+//                 ImageNode::new(assets.load("images/icon_diamond.png")).with_color(randomColor()),
+//                 Node {
+//                     width: SIZE,
+//                     height: SIZE,
+//                     padding: PADDING,
+//                     ..default()
+//                 },
+//             ),
+//             (
+//                 ImageNode::new(assets.load("images/icon_fire.png")).with_color(randomColor()),
+//                 Node {
+//                     width: SIZE,
+//                     height: SIZE,
+//                     padding: PADDING,
+//                     ..default()
+//                 },
+//             ),
+//             (
+//                 ImageNode::new(assets.load("images/icon_hourglass.png")).with_color(randomColor()),
+//                 Node {
+//                     width: SIZE,
+//                     height: SIZE,
+//                     padding: PADDING,
+//                     ..default()
+//                 },
+//             ),
+//             (
+//                 ImageNode::new(assets.load("images/icon_shield.png")).with_color(randomColor()),
+//                 Node {
+//                     width: SIZE,
+//                     height: SIZE,
+//                     padding: PADDING,
+//                     ..default()
+//                 },
+//             ),
+//             (
+//                 ImageNode::new(assets.load("images/icon_ice.png")).with_color(randomColor()),
+//                 Node {
+//                     width: SIZE,
+//                     height: SIZE,
+//                     padding: PADDING,
+//                     ..default()
+//                 },
+//             ),
+//         ],
+//         popover::Details::default().popover(position, content_a),
+//     )
+// }
 
-fn randomColor() -> Color {
-    Color::hsl(rand::random_range(0.0..360.0), 1., 0.6)
-}
+// fn randomColor() -> Color {
+//     Color::hsl(rand::random_range(0.0..360.0), 1., 0.6)
+// }
 
 #[derive(PartialEq)]
 pub enum ButtonStateEnum {
@@ -240,67 +240,67 @@ impl ButtonState {
     }
 }
 
-fn content_a(commands: &mut Commands, assets: &AssetServer, hover: &popover::Details) -> Entity {
-    content(commands, assets, hover, "Lorem ipsum dolor sit amet")
-}
+// fn content_a(commands: &mut Commands, assets: &AssetServer, hover: &popover::Details) -> Entity {
+//     content(commands, assets, hover, "Lorem ipsum dolor sit amet")
+// }
 
-fn content(
-    commands: &mut Commands,
-    assets: &AssetServer,
-    hover: &popover::Details,
-    text: impl Into<String>,
-) -> Entity {
-    commands
-        .spawn((
-            hover.bundle(),
-            BackgroundColor(color(hover.depth())),
-            children![
-                (
-                    Node {
-                        padding: UiRect::right(Val::Px(10.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    children![(
-                        Text::new(text),
-                        TextFont {
-                            font: assets.load(FONT_FILE),
-                            font_size: FONT_SCALE,
-                            ..default()
-                        },
-                        TextColor(FONT_COLOR),
-                    )],
-                ),
-                (
-                    Button,
-                    BackgroundColor(NORMAL_BUTTON),
-                    hover.popover(hover.position(), content_a),
-                    Node {
-                        padding: UiRect::all(Val::Px(10.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    FocusPolicy::Pass,
-                    children![(
-                        Text::new("More"),
-                        TextFont {
-                            font: assets.load(FONT_FILE),
-                            font_size: FONT_SCALE,
-                            ..default()
-                        },
-                        TextColor(FONT_COLOR),
-                    )],
-                )
-            ],
-        ))
-        .id()
-}
+// fn content(
+//     commands: &mut Commands,
+//     assets: &AssetServer,
+//     hover: &popover::Details,
+//     text: impl Into<String>,
+// ) -> Entity {
+//     commands
+//         .spawn((
+//             hover.bundle(),
+//             BackgroundColor(color(hover.depth())),
+//             children![
+//                 (
+//                     Node {
+//                         padding: UiRect::right(Val::Px(10.0)),
+//                         justify_content: JustifyContent::Center,
+//                         align_items: AlignItems::Center,
+//                         ..default()
+//                     },
+//                     children![(
+//                         Text::new(text),
+//                         TextFont {
+//                             font: assets.load(FONT_FILE),
+//                             font_size: FONT_SCALE,
+//                             ..default()
+//                         },
+//                         TextColor(FONT_COLOR),
+//                     )],
+//                 ),
+//                 (
+//                     Button,
+//                     BackgroundColor(NORMAL_BUTTON),
+//                     hover.popover(hover.position(), content_a),
+//                     Node {
+//                         padding: UiRect::all(Val::Px(10.0)),
+//                         justify_content: JustifyContent::Center,
+//                         align_items: AlignItems::Center,
+//                         ..default()
+//                     },
+//                     FocusPolicy::Pass,
+//                     children![(
+//                         Text::new("More"),
+//                         TextFont {
+//                             font: assets.load(FONT_FILE),
+//                             font_size: FONT_SCALE,
+//                             ..default()
+//                         },
+//                         TextColor(FONT_COLOR),
+//                     )],
+//                 )
+//             ],
+//         ))
+//         .id()
+// }
 
-fn color(index: i32) -> Color {
-    match index % 2 {
-        0 => Color::srgb(0.25, 0.25, 0.25),
-        _ => Color::srgb(0.35, 0.35, 0.35),
-    }
-}
+// fn color(index: i32) -> Color {
+//     match index % 2 {
+//         0 => Color::srgb(0.25, 0.25, 0.25),
+//         _ => Color::srgb(0.35, 0.35, 0.35),
+//     }
+// }

@@ -1,4 +1,4 @@
-use bevy::{ecs::world::reflect, prelude::*};
+use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<Grid>();
@@ -39,14 +39,6 @@ impl Grid {
             && location.y >= 0
         {
             Some((location.y * self.size.x + location.x) as usize)
-        } else {
-            None
-        }
-    }
-
-    pub fn get(&self, location: IVec2) -> Option<&GridContent> {
-        if let Some(index) = self.index(location) {
-            Some(&self.data[index])
         } else {
             None
         }

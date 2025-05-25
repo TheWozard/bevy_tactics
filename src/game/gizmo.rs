@@ -12,7 +12,7 @@ pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_systems(Update, (grid_gizmo, units_gizmo, turn_order_gizmo));
 }
 
-fn grid_gizmo(mut gizmos: Gizmos, mut query: Query<(&Transform, &grid::Grid)>) {
+fn grid_gizmo(mut gizmos: Gizmos, query: Query<(&Transform, &grid::Grid)>) {
     for (transform, grid) in query.iter() {
         gizmos
             .grid_2d(
