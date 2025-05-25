@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::ui::FocusPolicy;
-use rand::prelude::*;
+use rand;
 
 mod item;
 mod material;
@@ -64,6 +64,16 @@ fn setup(mut commands: Commands, assets: Res<AssetServer>) {
                     direction: Vec2::new(0.0, 1.0),
                     texture: assets.load("images/weapon_potion.png"),
                     specular_map: Some(assets.load("images/weapon_potion_distortion_map.png")),
+                    ..default()
+                },
+            }
+            .bundle(),
+            item::Item {
+                material: material::Material {
+                    material: material::Type::Crystal,
+                    direction: Vec2::new(0.0, 1.0),
+                    texture: assets.load("images/weapon_crystal.png"),
+                    specular_map: Some(assets.load("images/weapon_crystal_specular_map.png")),
                     ..default()
                 },
             }
@@ -157,8 +167,7 @@ fn button(assets: &AssetServer, position: popover::Position) -> impl Bundle {
 }
 
 fn randomColor() -> Color {
-    let mut rng = rand::rng();
-    Color::hsl(rng.random_range(0.0..360.0), 1., 0.6)
+    Color::hsl(rand::random_range(0.0..360.0), 1., 0.6)
 }
 
 #[derive(PartialEq)]

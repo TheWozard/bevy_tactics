@@ -7,8 +7,11 @@ pub fn plugin(app: &mut App) {
     app.add_systems(Update, animate::<Glint>);
     app.add_plugins(UiMaterialPlugin::<Distortion>::default());
     app.add_systems(Update, animate::<Distortion>);
+    app.add_plugins(UiMaterialPlugin::<Crystal>::default());
+    app.add_systems(Update, animate::<Crystal>);
 
-    app.add_systems(PostUpdate, Material::spawn_material);
+    // Its easier to add a Component and Observe it than keep track of all the Assets for the materials.
+    app.add_observer(Material::spawn_material);
 }
 
 #[derive(Clone, Debug, Default)]
@@ -17,8 +20,12 @@ pub enum Type {
     None,
     Glint,
     Distortion,
+    Crystal,
 }
 
+// Material is a unified component that holds all possible configuration options for any supported material.
+// The resulting material is determined by the `material` field.
+// Not all fields are used for all materials, but this enables flexibility for spawning materials.
 #[derive(Component, Clone, Debug, Default)]
 pub struct Material {
     pub material: Type,
@@ -29,16 +36,17 @@ pub struct Material {
 }
 
 impl Material {
-    // spawn_material adds the MaterialNode to the entity with the ItemMaterial component.
     fn spawn_material(
-        mut commands: Commands,
+        trigger: Trigger<OnAdd, Material>,
+        query: Query<&Material>,
         assets: Res<AssetServer>,
-        query: Query<(Entity, &Material), Added<Material>>,
+        mut commands: Commands,
         mut glint_assets: ResMut<Assets<Glint>>,
         mut distortion_assets: ResMut<Assets<Distortion>>,
+        mut crystal_assets: ResMut<Assets<Crystal>>,
     ) {
-        for (entity, item_material) in query.iter() {
-            let mut ec = commands.entity(entity);
+        if let Ok(item_material) = query.get(trigger.target()) {
+            let mut ec = commands.entity(trigger.target());
             match item_material.material {
                 Type::None => {
                     ec.insert(
@@ -64,11 +72,20 @@ impl Material {
                         noise_texture: assets.load("images/noise_flame.png"),
                     })));
                 }
+                Type::Crystal => {
+                    ec.insert(MaterialNode(crystal_assets.add(Crystal {
+                        tint: item_material.tint.to_linear().to_vec4(),
+                        time: 0.0,
+                        texture: item_material.texture.clone(),
+                        specular_map: item_material.get_specular_map(),
+                        noise_texture: assets.load("images/noise_voronoi.png"),
+                    })));
+                }
             }
         }
     }
 
-    // get_specular_map returns the specular map if it exists, otherwise it returns the texture.
+    // get_specular_map adds a fallback to the texture for the specular map.
     fn get_specular_map(&self) -> Handle<Image> {
         if self.specular_map.is_some() {
             self.specular_map.clone().unwrap()
@@ -95,7 +112,7 @@ fn animate<T: Animated + UiMaterial>(
 }
 
 #[derive(AsBindGroup, Asset, TypePath, Debug, Clone)]
-pub struct Glint {
+struct Glint {
     #[uniform(0)]
     tint: Vec4,
 
@@ -124,7 +141,7 @@ impl Animated for Glint {
 }
 
 #[derive(AsBindGroup, Asset, TypePath, Debug, Clone)]
-pub struct Distortion {
+struct Distortion {
     #[uniform(0)]
     tint: Vec4,
 
@@ -154,6 +171,39 @@ impl UiMaterial for Distortion {
 }
 
 impl Animated for Distortion {
+    fn tick(&mut self, time: f32) {
+        self.time += time;
+    }
+}
+
+#[derive(AsBindGroup, Asset, TypePath, Debug, Clone)]
+struct Crystal {
+    #[uniform(0)]
+    tint: Vec4,
+
+    #[uniform(1)]
+    time: f32,
+
+    #[texture(2)]
+    #[sampler(3)]
+    texture: Handle<Image>,
+
+    #[texture(4)]
+    #[sampler(5)]
+    specular_map: Handle<Image>,
+
+    #[texture(6)]
+    #[sampler(7)]
+    noise_texture: Handle<Image>,
+}
+
+impl UiMaterial for Crystal {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/crystal_material.wgsl".into()
+    }
+}
+
+impl Animated for Crystal {
     fn tick(&mut self, time: f32) {
         self.time += time;
     }
