@@ -1,6 +1,10 @@
-use bevy::prelude::*;
+use bevy::{ecs::relationship::Relationship, prelude::*};
+
+use super::utils;
 
 pub fn plugin(app: &mut App) {
+    app.add_observer(on_remove_grid_location);
+
     app.register_type::<Grid>();
     app.register_type::<GridLocation>();
     app.register_type::<GridContent>();
@@ -11,8 +15,7 @@ pub fn plugin(app: &mut App) {
 #[derive(Component, Clone, Debug, Reflect)]
 #[require(Transform, Name::new("Grid"))]
 pub struct Grid {
-    pub size: IVec2,
-    pub data: Vec<GridContent>,
+    grid: utils::Grid<Entity>,
 }
 
 #[derive(Clone, Debug, Reflect)]
@@ -23,32 +26,73 @@ pub struct GridContent {
 impl Grid {
     pub fn new(size: IVec2) -> Self {
         Grid {
-            size,
-            data: Vec::with_capacity((size.x * size.y) as usize),
+            grid: utils::Grid::new(size),
         }
     }
 
     pub fn get_size(&self) -> IVec2 {
-        self.size
+        self.grid.size()
     }
 
-    pub fn index(&self, location: IVec2) -> Option<usize> {
-        if location.y < self.size.y
-            && location.x < self.size.x
-            && location.x >= 0
-            && location.y >= 0
-        {
-            Some((location.y * self.size.x + location.x) as usize)
+    pub fn spawn(&mut self, commands: &mut Commands, location: &IVec2, bundle: impl Bundle) -> Option<Entity> {
+        if self.grid.get(location).is_none() {
+            self.grid
+                .set(location, commands.spawn((GridLocation::new(location.clone()), bundle)).id())
+                .copied()
         } else {
             None
         }
     }
 
-    pub fn get_location(&self, location: IVec2) -> Option<GridLocation> {
-        if self.index(location).is_some() {
-            Some(GridLocation::new(location))
-        } else {
-            None
+    pub fn move_to(&mut self, from: &IVec2, to: &IVec2) -> Option<GridLocation> {
+        if self.grid.within(to) && self.grid.get(from).is_some() {
+            if self.grid.get(to).is_none() {
+                let entity = self.grid.take(from).unwrap();
+                self.grid.set(to, entity);
+                return Some(GridLocation::new(to.clone()));
+            }
+        }
+        None
+    }
+
+    pub fn get(&self, location: &IVec2) -> Option<Entity> {
+        self.grid.get(location).copied()
+    }
+
+    fn clear(&mut self, location: &IVec2) {
+        self.grid.take(location);
+    }
+
+    pub fn find(&self, location: &IVec2, direction: &IVec2, predicate: impl Fn(Entity) -> bool) -> Option<IVec2> {
+        let mut iter = self.grid.iter_breath_first(location, direction).skip(1);
+        while let Some(location) = self.grid.find(&mut iter, |v| v.is_some()) {
+            if let Some(entity) = self.grid.get(&location) {
+                if predicate(entity.clone()) {
+                    return Some(location);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn a_star_move(&mut self, from: &IVec2, to: &IVec2, steps: usize) -> Option<GridLocation> {
+        let path = self.grid.a_star(from, to, |v| v.is_none());
+        let mut end = from;
+        if path.len() > 0 {
+            end = &path[steps.min(path.len() - 2)];
+        }
+        self.move_to(from, end)
+    }
+}
+
+fn on_remove_grid_location(
+    trigger: Trigger<OnRemove, GridLocation>,
+    location_query: Query<(&GridLocation, &GridOwner)>,
+    mut grid_query: Query<&mut Grid>,
+) {
+    if let Ok((grid_location, grid_owned)) = location_query.get(trigger.target()) {
+        if let Ok(mut grid) = grid_query.get_mut(grid_owned.get()) {
+            grid.clear(grid_location.as_ivec2());
         }
     }
 }
@@ -64,8 +108,8 @@ impl GridLocation {
         GridLocation { location }
     }
 
-    pub fn as_ivec2(&self) -> IVec2 {
-        self.location
+    pub fn as_ivec2(&self) -> &IVec2 {
+        &self.location
     }
 }
 
