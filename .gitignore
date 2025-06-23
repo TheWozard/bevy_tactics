@@ -1,6 +1,8 @@
-.vscode
+# Max OS specific files
 .DS_Store
-
+# Rust builds
 /target
-/assets/fonts
-/assets/images
+# This file contains environment-specific configuration like linker settings
+.cargo/config.toml
+
+/assets

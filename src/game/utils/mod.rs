@@ -103,27 +103,27 @@ impl<T> Grid<T> {
 
     // --- Iterators ---
 
-    pub fn iter_entire_grid(&self) -> impl Iterator<Item = usize> {
+    pub fn iter_entire_grid(&self) -> impl Iterator<Item = usize> + use<T> {
         0..self.data.len()
     }
 
-    pub fn iter_from_index(&self, index: usize) -> impl Iterator<Item = usize> {
+    pub fn iter_from_index(&self, index: usize) -> impl Iterator<Item = usize> + use<T> {
         (index..self.data.len()).chain(0..index)
     }
 
-    pub fn iter_square(&self, start: &IVec2, end: &IVec2) -> impl Iterator<Item = usize> {
+    pub fn iter_square(&self, start: &IVec2, end: &IVec2) -> impl Iterator<Item = usize> + use<T> {
         let x_range = start.x.max(0)..end.x.min(self.size.x);
         let y_range = start.y.max(0)..end.y.min(self.size.y);
         let size = self.size;
         y_range.flat_map(move |y| x_range.clone().map(move |x| vec_to_index(&size, &IVec2::new(x, y))))
     }
 
-    pub fn iter_square_size(&self, start: &IVec2, size: &IVec2) -> impl Iterator<Item = usize> {
+    pub fn iter_square_size(&self, start: &IVec2, size: &IVec2) -> impl Iterator<Item = usize> + use<T> {
         self.iter_square(&start, &(start + size))
     }
 
     // Breath-first iterator that explores the grid breath-first from a starting point in a given direction.
-    pub fn iter_breath_first(&self, start: &IVec2, direction: &IVec2) -> impl Iterator<Item = usize> {
+    pub fn iter_breath_first(&self, start: &IVec2, direction: &IVec2) -> impl Iterator<Item = usize> + use<T> {
         let mut queue = VecDeque::with_capacity(self.data.len());
         queue.push_back(start.clone());
         let mut visited = vec![false; (self.size.x * self.size.y) as usize];

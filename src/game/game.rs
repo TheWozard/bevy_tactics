@@ -67,7 +67,6 @@ impl TurnOrder {
                             false
                         }
                     }) {
-                        movement.direction = (nearest - location).as_vec2().normalize_or_zero();
                         if nearest.distance_squared(*location) <= 1 {
                             if let Some(target) = grid.get(&nearest) {
                                 if let Ok((mut health, target)) = target_query.get_mut(target) {
@@ -80,8 +79,11 @@ impl TurnOrder {
                             }
                         } else {
                             if let Some(new_location) = grid.a_star_move(location, &nearest, movement.spaces as usize) {
+                                movement.direction = (nearest - new_location.as_ivec2()).as_vec2().normalize_or_zero();
                                 *grid_location = new_location;
                                 break;
+                            } else {
+                                movement.direction = Vec2::ZERO; // No valid path, stop moving
                             }
                         }
                     } else {
