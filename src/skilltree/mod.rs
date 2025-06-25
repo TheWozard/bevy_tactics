@@ -1,10 +1,7 @@
 use bevy::{
-    asset::RenderAssetUsages,
-    math::{NormedVectorSpace, U8Vec2},
     platform::collections::HashMap,
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
-    sprite::Wireframe2d,
 };
 
 pub fn plugin(app: &mut bevy::prelude::App) {
@@ -21,6 +18,8 @@ pub fn spawn_initial_tree(mut events: EventWriter<SkillTreeSpawnEvent>) {
 const UI_NODE_SCALE: f32 = 32.0;
 const UI_EDGE_SCALE: f32 = 8.0;
 const UI_NODE_SPACING: f32 = 100.0;
+const UI_TEXTURE_MULTIPLIER: f32 = 2.0;
+const UI_TEXTURE_SCALE: f32 = 1.0 / UI_TEXTURE_MULTIPLIER;
 
 pub fn spawn_skill_tree(
     mut events: EventReader<SkillTreeSpawnEvent>,
@@ -39,6 +38,7 @@ pub fn spawn_skill_tree(
             let end_node = event.tree.nodes.get(&edge.1).unwrap();
             let end_node_position = end_node.position * UI_NODE_SPACING;
             let direction = end_node_position - start_node_position;
+            let color = start_node.color.mix(&end_node.color, 0.5);
 
             match edge.2 {
                 EdgeStyle::Straight => {
@@ -47,19 +47,23 @@ pub fn spawn_skill_tree(
                             .with_rotation(Quat::from_rotation_z(direction.y.atan2(direction.x)))
                             .with_scale(Vec3::new(direction.length(), UI_EDGE_SCALE, 1.0)),
                         Mesh2d(edge_mesh.clone()),
-                        MeshMaterial2d(materials.add(ColorMaterial::from_color(start_node.color.mix(&end_node.color, 0.5)))),
+                        MeshMaterial2d(materials.add(ColorMaterial::from_color(color))),
                         Name::new("SkillTreeStraightEdge"),
                     ));
                 }
                 EdgeStyle::Curved(center) => {
                     let radius = Vec2::new(start_node_position.distance(center), end_node_position.distance(center));
                     commands.spawn((
-                        Transform::from_translation(center.extend(1.0)),
+                        Transform::from_translation(center.extend(1.0)).with_scale(Vec3::new(UI_TEXTURE_SCALE, UI_TEXTURE_SCALE, 1.0)),
                         Sprite {
-                            image: images.get_circle((radius.x as u32, radius.y as u32), &mut assets),
+                            image: images.get_circle(
+                                (radius * UI_TEXTURE_MULTIPLIER).as_uvec2(),
+                                UI_EDGE_SCALE * UI_TEXTURE_MULTIPLIER,
+                                &mut assets,
+                            ),
+                            color: color,
                             ..default()
                         },
-                        Wireframe2d,
                         Name::new("SkillTreeCurvedEdge"),
                     ));
                 }
@@ -187,17 +191,16 @@ impl Default for DynamicImages {
 }
 
 const TEXTURE_BOARDER: u32 = 2;
-const TEXTURE_THICKNESS: u32 = 8;
 
 impl DynamicImages {
-    pub fn get_circle(&mut self, radius: (u32, u32), assets: &mut Assets<Image>) -> Handle<Image> {
-        if let Some(handle) = self.circles.get(&radius) {
+    pub fn get_circle(&mut self, radius: UVec2, thickness: f32, assets: &mut Assets<Image>) -> Handle<Image> {
+        if let Some(handle) = self.circles.get(&(radius.x, radius.y)) {
             return handle.clone();
         }
 
         let size = UVec2::new(
-            (radius.0 + TEXTURE_BOARDER + TEXTURE_THICKNESS) * 2,
-            (radius.1 + TEXTURE_BOARDER + TEXTURE_THICKNESS) * 2,
+            (radius.x + TEXTURE_BOARDER + thickness as u32) * 2,
+            (radius.y + TEXTURE_BOARDER + thickness as u32) * 2,
         );
 
         let image = Image::new(
@@ -207,12 +210,12 @@ impl DynamicImages {
                 depth_or_array_layers: 1,
             },
             TextureDimension::D2,
-            ellipse_image(size, UVec2::new(radius.0, radius.1), TEXTURE_THICKNESS as f32 / 2.0),
+            ellipse_image(size, UVec2::new(radius.x, radius.y), thickness / 2.0),
             TextureFormat::Rgba8Unorm,
-            RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
+            bevy::asset::RenderAssetUsages::MAIN_WORLD | bevy::asset::RenderAssetUsages::RENDER_WORLD,
         );
         let handle = assets.add(image);
-        self.circles.insert(radius, handle.clone());
+        self.circles.insert((radius.x, radius.y), handle.clone());
         handle
     }
 }
@@ -220,15 +223,16 @@ impl DynamicImages {
 fn ellipse_image(size: UVec2, radius: UVec2, thickness: f32) -> Vec<u8> {
     let mut data = vec![255 as u8; (size.x * size.y * 4) as usize];
     let center = size.as_vec2() / 2.0;
-    let vec2_radius = radius.as_vec2();
+    let exterior_radius = radius.as_vec2() + thickness;
+    let interior_radius = radius.as_vec2() - thickness;
 
     for y in 0..(center.y.ceil() as u32) {
         for x in 0..(center.x.ceil() as u32) {
             let point = Vec2::new(x as f32, y as f32) - center;
-            // ((x-x0)/a)2 + ((y-y0)/b)2 = 1
-            let dist_to_edge = (point.x / vec2_radius.x).powi(2) + (point.y / vec2_radius.y).powi(2);
+            let outer_dist = (point.x / exterior_radius.x).powf(2.0) + (point.y / exterior_radius.y).powf(2.0);
+            let inner_dist = (point.x / interior_radius.x).powf(2.0) + (point.y / interior_radius.y).powf(2.0);
 
-            let alpha = if dist_to_edge < 1.0 { 255 } else { 0 };
+            let alpha = if outer_dist < 1.0 && inner_dist > 1.0 { 255 } else { 0 };
 
             // Assign to the four corners.
             let px = x * 4;
