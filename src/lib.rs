@@ -4,6 +4,7 @@ use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 pub mod game;
+pub mod skilltree;
 pub mod ui;
 
 pub fn baseline_app() -> App {
@@ -22,9 +23,7 @@ pub fn baseline_app() -> App {
         app.add_plugins(EguiPlugin {
             enable_multipass_for_primary_context: true,
         });
-        app.add_plugins(
-            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
-        );
+        app.add_plugins(WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)));
     }
 
     app.add_systems(Startup, camera_setup);
@@ -37,10 +36,7 @@ fn camera_setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-fn exit_condition(
-    mut app_exit_events: EventWriter<AppExit>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-) {
+fn exit_condition(mut app_exit_events: EventWriter<AppExit>, keyboard_input: Res<ButtonInput<KeyCode>>) {
     if keyboard_input.just_pressed(KeyCode::Escape) {
         app_exit_events.write(AppExit::Success);
     }
