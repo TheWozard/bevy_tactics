@@ -40,9 +40,12 @@ fn init(mut commands: Commands) {
                     },
                     unit::Movement::new(steps),
                     unit::Health::new(3),
+                    unit::Speed::new(rand::random_range(2..10)),
                 ),
             );
-            commands.entity(root).add_one_related::<grid::GridOwner>(enemy.unwrap());
+            commands
+                .entity(root)
+                .add_one_related::<grid::GridOwner>(enemy.unwrap());
         }
     }
 
@@ -60,11 +63,16 @@ fn init(mut commands: Commands) {
                     },
                     unit::Movement::new(steps),
                     unit::Health::new(3),
+                    unit::Speed::new(rand::random_range(2..10)),
                 ),
             );
-            commands.entity(root).add_one_related::<grid::GridOwner>(enemy.unwrap());
+            commands
+                .entity(root)
+                .add_one_related::<grid::GridOwner>(enemy.unwrap());
         }
     }
 
-    commands.entity(root).insert((grid, game::TurnOrder::default()));
+    commands
+        .entity(root)
+        .insert((grid, game::TurnOrder::default()));
 }

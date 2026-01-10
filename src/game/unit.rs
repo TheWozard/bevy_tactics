@@ -51,10 +51,24 @@ impl Health {
     }
 }
 
-fn despawn_on_zero_health(mut commands: Commands, mut query: Query<(Entity, &Health), Changed<Health>>) {
+fn despawn_on_zero_health(
+    mut commands: Commands,
+    mut query: Query<(Entity, &Health), Changed<Health>>,
+) {
     for (entity, health) in query.iter_mut() {
         if health.current == 0 {
             commands.entity(entity).despawn();
         }
+    }
+}
+
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct Speed {
+    pub value: u32,
+}
+
+impl Speed {
+    pub fn new(value: u32) -> Self {
+        Speed { value }
     }
 }

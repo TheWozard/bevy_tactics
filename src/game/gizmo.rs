@@ -10,7 +10,10 @@ const GRID_COLOR: Color = Color::srgb(0.5, 0.5, 0.5);
 const HEALTH_COLOR: Color = Color::srgb(0.0, 1.0, 0.0);
 
 pub fn plugin(app: &mut bevy::prelude::App) {
-    app.add_systems(Update, (grid_gizmo, units_gizmo, turn_order_gizmo, unit_health_gizmo));
+    app.add_systems(
+        Update,
+        (grid_gizmo, units_gizmo, turn_order_gizmo, unit_health_gizmo),
+    );
 }
 
 fn grid_gizmo(mut gizmos: Gizmos, query: Query<(&Transform, &grid::Grid)>) {
@@ -29,8 +32,13 @@ fn grid_gizmo(mut gizmos: Gizmos, query: Query<(&Transform, &grid::Grid)>) {
     }
 }
 
-fn grid_location(transform: &Transform, grid: &grid::Grid, grid_location: impl Into<IVec2>) -> Isometry2d {
-    let offset = (grid.get_size().as_vec2() - 1.0) * 0.5 * GRID_SCALE + transform.translation.truncate();
+fn grid_location(
+    transform: &Transform,
+    grid: &grid::Grid,
+    grid_location: impl Into<IVec2>,
+) -> Isometry2d {
+    let offset =
+        (grid.get_size().as_vec2() - 1.0) * 0.5 * GRID_SCALE + transform.translation.truncate();
     Isometry2d::from_translation(grid_location.into().as_vec2() * GRID_SCALE - offset)
 }
 
@@ -57,21 +65,36 @@ fn units_gizmo(
 }
 
 fn unit_gizmo(gizmos: &mut Gizmos, unit: &unit::Unit, isometry: Isometry2d) {
-    gizmos.circle_2d(isometry, UNIT_SCALE * 0.5, unit.color).resolution(unit.sides);
+    gizmos
+        .circle_2d(isometry, UNIT_SCALE * 0.5, unit.color)
+        .resolution(unit.sides);
 }
 
-fn turn_order_gizmo(mut gizmos: Gizmos, grid_query: Query<(&Transform, &grid::Grid, &game::TurnOrder)>, unit_query: Query<&unit::Unit>) {
+fn turn_order_gizmo(
+    mut gizmos: Gizmos,
+    grid_query: Query<(&Transform, &grid::Grid, &game::TurnOrder)>,
+    unit_query: Query<&unit::Unit>,
+) {
     for (transform, grid, turn_order) in grid_query.iter() {
         let mut offset = 1;
+        let mut indent = 1;
         for turn in turn_order.iter_turns() {
-            if let Ok(unit) = unit_query.get(*turn) {
-                unit_gizmo(
-                    &mut gizmos,
-                    unit,
-                    grid_location(transform, grid, grid.get_size() + IVec2::new(1, -offset)),
-                );
-                offset += 1;
+            for entity in turn {
+                if let Ok(unit) = unit_query.get(*entity) {
+                    unit_gizmo(
+                        &mut gizmos,
+                        unit,
+                        grid_location(
+                            transform,
+                            grid,
+                            grid.get_size() + IVec2::new(indent, -offset),
+                        ),
+                    );
+                }
+                indent += 1;
             }
+            indent = 1;
+            offset += 1;
         }
     }
 }
@@ -84,10 +107,15 @@ fn unit_health_gizmo(
     for (transform, grid, owned) in grid_query.iter() {
         for (location, health) in unit_query.iter_many(owned.iter()) {
             let width = UNIT_SCALE;
-            let location = grid_location(transform, grid, location).translation + Vec2::new(-(width * 0.5), UNIT_SCALE * 0.6);
+            let location = grid_location(transform, grid, location).translation
+                + Vec2::new(-(width * 0.5), UNIT_SCALE * 0.6);
             let percent = health.percent();
             if percent < 1.0 {
-                gizmos.line_2d(location, location + Vec2::new(width * percent, 0.0), HEALTH_COLOR);
+                gizmos.line_2d(
+                    location,
+                    location + Vec2::new(width * percent, 0.0),
+                    HEALTH_COLOR,
+                );
                 gizmos.line_2d(
                     location + Vec2::new(width * percent, 0.0),
                     location + Vec2::new(width, 0.0),
