@@ -142,7 +142,6 @@ impl TurnOrder {
                                     0.2,
                                 ));
                                 *grid_location = location;
-                                break;
                             }
                         }
                     }
