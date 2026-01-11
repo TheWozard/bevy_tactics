@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use super::grid;
 use super::unit;
 use crate::game::animate::Lerp;
+use crate::theme;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_systems(
@@ -104,6 +105,7 @@ impl TurnOrder {
         mut target_query: Query<(&mut unit::Health, &unit::Unit)>,
         mut grid_query: Query<&mut grid::Grid>,
         search_query: Query<&unit::Unit>,
+        sprites: Res<theme::Sprites>,
     ) {
         for event in events.read() {
             if let Ok((entity, transform, mut grid_location, movement, grid_owner, unit)) =
@@ -135,7 +137,7 @@ impl TurnOrder {
                                         .iter()
                                         .map(|loc| {
                                             grid.grid
-                                                .location_to_vec2(loc, 64.0)
+                                                .location_to_vec2(loc, sprites.scale)
                                                 .extend(transform.translation.z)
                                         })
                                         .collect(),

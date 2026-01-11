@@ -72,7 +72,7 @@ impl Sprites {
         mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     ) {
         commands.insert_resource(Sprites {
-            scale: 64.0,
+            scale: 16.0,
             image: asset_server.load("images/64x64.png"),
             tile: asset_server.load("tiles/tile.png"),
             unit: asset_server.load("tiles/unit.png"),

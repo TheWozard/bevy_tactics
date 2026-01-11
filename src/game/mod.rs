@@ -22,13 +22,13 @@ pub fn plugin(app: &mut bevy::prelude::App) {
 
 fn init(mut commands: Commands, sprites: Res<Sprites>) {
     let root = commands.spawn_empty().id();
-    let size = IVec2::new(10, 10);
+    let size = IVec2::new(40, 40);
     let mut grid = grid::Grid::new(size);
 
     let step_range = 2..4;
-    let units = 10;
+    let units = 100;
 
-    let spawn_space = IVec2::new(size.x, size.y / 2);
+    let spawn_space = IVec2::new(size.x, size.y / 3);
     let team_1_spaces = utils::SquareSelection::new(IVec2::ZERO, spawn_space);
     for _ in 0..units {
         if let Some(index) = team_1_spaces.random_open(&grid.grid) {
@@ -55,7 +55,10 @@ fn init(mut commands: Commands, sprites: Res<Sprites>) {
         }
     }
 
-    let team_2_spaces = utils::SquareSelection::new(IVec2::new(0, spawn_space.y), grid.grid.size());
+    let team_2_spaces = utils::SquareSelection::new(
+        IVec2::new(0, grid.grid.size().y - spawn_space.y),
+        grid.grid.size(),
+    );
     for _ in 0..units {
         if let Some(index) = team_2_spaces.random_open(&grid.grid) {
             let enemy = grid.spawn(
