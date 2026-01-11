@@ -87,13 +87,27 @@ impl Grid {
         None
     }
 
-    pub fn a_star_move(&mut self, from: &IVec2, to: &IVec2, steps: usize) -> Option<GridLocation> {
+    pub fn a_star_move(
+        &mut self,
+        from: &IVec2,
+        to: &IVec2,
+        steps: usize,
+    ) -> Option<(GridLocation, Vec<IVec2>)> {
         let path = self.grid.a_star(from, to, |v| v.is_none());
-        let mut end = from;
-        if path.len() > 0 {
-            end = &path[steps.min(path.len() - 2)];
+        let mut trimmed_path = if path.len() > steps + 1 {
+            path[..=steps].to_vec()
+        } else {
+            path[..].to_vec()
+        };
+        let mut end = trimmed_path.last().cloned()?;
+        if end == *to {
+            trimmed_path.pop();
+            end = trimmed_path.last().cloned()?;
         }
-        self.move_to(from, end)
+        if let Some(target) = self.move_to(from, &end) {
+            return Some((target, trimmed_path));
+        }
+        None
     }
 }
 

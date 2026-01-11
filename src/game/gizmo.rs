@@ -1,15 +1,14 @@
 use bevy::prelude::*;
 
-use super::game;
 use super::grid;
 use super::unit;
 
 const GRID_SCALE: Vec2 = Vec2::splat(64.0);
-const UNIT_SCALE: f32 = 30.;
+const UNIT_SCALE: f32 = 64.;
 const HEALTH_COLOR: Color = Color::srgb(0.0, 1.0, 0.0);
 
 pub fn plugin(app: &mut bevy::prelude::App) {
-    app.add_systems(Update, (units_gizmo, turn_order_gizmo, unit_health_gizmo));
+    app.add_systems(Update, unit_health_gizmo);
 }
 
 fn grid_location(
@@ -20,63 +19,6 @@ fn grid_location(
     let offset =
         (grid.grid.size().as_vec2() - 1.0) * 0.5 * GRID_SCALE + transform.translation.truncate();
     Isometry2d::from_translation(grid_location.into().as_vec2() * GRID_SCALE - offset)
-}
-
-fn units_gizmo(
-    mut gizmos: Gizmos,
-    unit_query: Query<(&unit::Unit, &grid::GridLocation, Option<&unit::Movement>)>,
-    grid_query: Query<(&Transform, &grid::Grid, &grid::GridOwned)>,
-) {
-    for (transform, grid, owned) in grid_query.iter() {
-        for (unit, location, movement) in unit_query.iter_many(owned.iter()) {
-            let loc = grid_location(transform, grid, location);
-            if let Some(movement) = movement {
-                unit_gizmo(&mut gizmos, unit, loc.clone());
-                if movement.direction != Vec2::ZERO {
-                    gizmos.arrow_2d(
-                        loc.translation - (movement.direction * UNIT_SCALE * 0.2),
-                        loc.translation + (movement.direction * UNIT_SCALE * 0.2),
-                        unit.color,
-                    );
-                }
-            }
-        }
-    }
-}
-
-fn unit_gizmo(gizmos: &mut Gizmos, unit: &unit::Unit, isometry: Isometry2d) {
-    gizmos
-        .circle_2d(isometry, UNIT_SCALE * 0.5, unit.color)
-        .resolution(unit.sides);
-}
-
-fn turn_order_gizmo(
-    mut gizmos: Gizmos,
-    grid_query: Query<(&Transform, &grid::Grid, &game::TurnOrder)>,
-    unit_query: Query<&unit::Unit>,
-) {
-    for (transform, grid, turn_order) in grid_query.iter() {
-        let mut offset = 1;
-        let mut indent = 1;
-        for turn in turn_order.iter_turns() {
-            for entity in turn {
-                if let Ok(unit) = unit_query.get(*entity) {
-                    unit_gizmo(
-                        &mut gizmos,
-                        unit,
-                        grid_location(
-                            transform,
-                            grid,
-                            grid.grid.size() + IVec2::new(indent, -offset),
-                        ),
-                    );
-                }
-                indent += 1;
-            }
-            indent = 1;
-            offset += 1;
-        }
-    }
 }
 
 fn unit_health_gizmo(

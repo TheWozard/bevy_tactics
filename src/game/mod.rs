@@ -1,47 +1,52 @@
 use bevy::prelude::*;
 
+mod animate;
 mod game;
 mod gizmo;
 mod grid;
 mod tiles;
 mod unit;
-
-#[allow(dead_code)]
 mod utils;
+
+use crate::theme::Sprites;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_plugins(game::plugin);
     app.add_plugins(gizmo::plugin);
     app.add_plugins(grid::plugin);
     app.add_plugins(unit::plugin);
+    app.add_plugins(animate::plugin);
 
     app.add_systems(Startup, (init, tiles::populate).chain());
 }
 
-fn init(mut commands: Commands) {
+fn init(mut commands: Commands, sprites: Res<Sprites>) {
     let root = commands.spawn_empty().id();
     let size = IVec2::new(10, 10);
     let mut grid = grid::Grid::new(size);
 
-    let steps = 2;
+    let step_range = 2..4;
     let units = 10;
 
     let spawn_space = IVec2::new(size.x, size.y / 2);
-    let mut team_1_spaces = utils::Grid::new(spawn_space);
-    for i in 0..units {
-        if let Some(loc) = team_1_spaces.random(()) {
+    let team_1_spaces = utils::SquareSelection::new(IVec2::ZERO, spawn_space);
+    for _ in 0..units {
+        if let Some(index) = team_1_spaces.random_open(&grid.grid) {
             let enemy = grid.spawn(
                 &mut commands,
-                &loc,
+                &grid.grid.location(index),
                 (
-                    unit::Unit {
-                        team: 1,
+                    Transform::from_translation(
+                        grid.grid.index_to_vec2(index, sprites.scale).extend(1.0),
+                    ),
+                    Sprite {
                         color: Color::linear_rgb(1.0, 0.0, 0.0),
-                        sides: 3 + i,
+                        ..sprites.unit_sprite()
                     },
-                    unit::Movement::new(steps),
+                    unit::Unit { team: 1 },
+                    unit::Movement::new(rand::random_range(step_range.clone())),
                     unit::Health::new(3),
-                    unit::Speed::new(rand::random_range(2..10)),
+                    unit::Speed::new(1),
                 ),
             );
             commands
@@ -50,21 +55,24 @@ fn init(mut commands: Commands) {
         }
     }
 
-    let mut team_2_spaces = utils::Grid::new(spawn_space);
-    for i in 0..units {
-        if let Some(loc) = team_2_spaces.random(()) {
+    let team_2_spaces = utils::SquareSelection::new(IVec2::new(0, spawn_space.y), grid.grid.size());
+    for _ in 0..units {
+        if let Some(index) = team_2_spaces.random_open(&grid.grid) {
             let enemy = grid.spawn(
                 &mut commands,
-                &(size - 1 - loc),
+                &grid.grid.location(index),
                 (
-                    unit::Unit {
-                        team: 2,
+                    Transform::from_translation(
+                        grid.grid.index_to_vec2(index, sprites.scale).extend(1.0),
+                    ),
+                    Sprite {
                         color: Color::linear_rgb(0.0, 0.0, 1.0),
-                        sides: 3 + i,
+                        ..sprites.unit_sprite()
                     },
-                    unit::Movement::new(steps),
+                    unit::Unit { team: 2 },
+                    unit::Movement::new(rand::random_range(step_range.clone())),
                     unit::Health::new(3),
-                    unit::Speed::new(rand::random_range(2..10)),
+                    unit::Speed::new(2),
                 ),
             );
             commands

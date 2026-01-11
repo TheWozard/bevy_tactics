@@ -12,22 +12,16 @@ pub fn plugin(app: &mut bevy::prelude::App) {
 #[require(Transform, Name::new("Unit"))]
 pub struct Unit {
     pub team: u32,
-    pub color: Color,
-    pub sides: u32,
 }
 
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct Movement {
     pub spaces: u32,
-    pub direction: Vec2,
 }
 
 impl Movement {
     pub fn new(spaces: u32) -> Self {
-        Movement {
-            spaces,
-            direction: Vec2::new(0.0, 0.0),
-        }
+        Movement { spaces }
     }
 }
 

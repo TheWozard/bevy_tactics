@@ -104,7 +104,7 @@ impl Sprites {
         }
     }
 
-    pub fn unit_bundle(&self) -> impl Bundle {
+    pub fn unit_sprite(&self) -> Sprite {
         Sprite {
             image: self.unit.clone(),
             ..default()

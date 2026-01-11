@@ -57,19 +57,6 @@ impl<T> Grid<T> {
         }
     }
 
-    // Places the value at a random available location in the grid.
-    pub fn random(&mut self, value: T) -> Option<IVec2> {
-        if let Some(index) = &mut self
-            .iter_from_index(rand::random_range(..self.data.len()))
-            .find(|i| self.data[*i].is_none())
-        {
-            self.data[*index] = Some(value);
-            Some(self.location(*index))
-        } else {
-            None
-        }
-    }
-
     // Uses the passed iterator to find the location of the next available or used item.
     pub fn find(
         &self,
@@ -116,40 +103,21 @@ impl<T> Grid<T> {
     }
 
     // Converts an iterator of indices to an iterator of Vec3, applying the specified scale.
-    pub fn index_to_transform(&self, index: usize, scale: f32) -> Vec3 {
+    pub fn index_to_vec2(&self, index: usize, scale: f32) -> Vec2 {
+        let loc = self.location(index);
+        self.location_to_vec2(&loc, scale)
+    }
+
+    pub fn location_to_vec2(&self, location: &IVec2, scale: f32) -> Vec2 {
         let scale = Vec2::splat(scale);
         let scale_offset = ((self.size.as_vec2() * scale) - scale) / 2.0;
-        let loc = self.location(index);
-        ((loc.as_vec2() * scale) - scale_offset).extend(0.0)
+        (location.as_vec2() * scale) - scale_offset
     }
 
     // --- Iterators ---
 
     pub fn iter_entire_grid(&self) -> impl Iterator<Item = usize> + use<T> {
         0..self.data.len()
-    }
-
-    pub fn iter_from_index(&self, index: usize) -> impl Iterator<Item = usize> + use<T> {
-        (index..self.data.len()).chain(0..index)
-    }
-
-    pub fn iter_square(&self, start: &IVec2, end: &IVec2) -> impl Iterator<Item = usize> + use<T> {
-        let x_range = start.x.max(0)..end.x.min(self.size.x);
-        let y_range = start.y.max(0)..end.y.min(self.size.y);
-        let size = self.size;
-        y_range.flat_map(move |y| {
-            x_range
-                .clone()
-                .map(move |x| vec_to_index(&size, &IVec2::new(x, y)))
-        })
-    }
-
-    pub fn iter_square_size(
-        &self,
-        start: &IVec2,
-        size: &IVec2,
-    ) -> impl Iterator<Item = usize> + use<T> {
-        self.iter_square(&start, &(start + size))
     }
 
     // Breath-first iterator that explores the grid breath-first from a starting point in a given direction.
@@ -162,6 +130,7 @@ impl<T> Grid<T> {
         queue.push_back(start.clone());
         let mut visited = vec![false; (self.size.x * self.size.y) as usize];
         let size = self.size;
+        let len = self.data.len();
         let mut dir = direction.clone();
         if dir == IVec2::ZERO || dir.length_squared() != 1 {
             dir = IVec2::new(1, 0); // Default direction if none is provided
@@ -170,6 +139,9 @@ impl<T> Grid<T> {
         std::iter::from_fn(move || {
             while let Some(current) = queue.pop_front() {
                 let index = vec_to_index(&size, &current);
+                if index >= len {
+                    continue;
+                }
                 if !visited[index] {
                     visited[index] = true;
                     queue.extend(
@@ -205,10 +177,8 @@ impl<T> Grid<T> {
         })
     }
 
-    // --- Private methods ---
-
     // Returns the index within the internal data vec the location maps to.
-    fn index(&self, location: &IVec2) -> Option<usize> {
+    pub fn index(&self, location: &IVec2) -> Option<usize> {
         if vec_within(&self.size, location) {
             Some(vec_to_index(&self.size, location))
         } else {
@@ -218,7 +188,7 @@ impl<T> Grid<T> {
 
     // Returns the location in the grid for a given index.
     // The index is wrapped around the grid size to ensure it stays within bounds.
-    fn location(&self, mut index: usize) -> IVec2 {
+    pub fn location(&self, mut index: usize) -> IVec2 {
         index = index % self.data.len();
         IVec2::new(
             (index % self.size.x as usize) as i32,
@@ -233,6 +203,30 @@ fn vec_to_index(size: &IVec2, location: &IVec2) -> usize {
 
 fn vec_within(size: &IVec2, location: &IVec2) -> bool {
     location.x >= 0 && location.x < size.x && location.y >= 0 && location.y < size.y
+}
+
+pub struct SquareSelection {
+    offset: IVec2,
+    size: IVec2,
+}
+
+impl SquareSelection {
+    pub fn new(start: IVec2, end: IVec2) -> Self {
+        SquareSelection {
+            offset: start,
+            size: end - start,
+        }
+    }
+
+    pub fn random_open<T>(&self, grid: &Grid<T>) -> Option<usize> {
+        let index = rand::random_range(..self.size.x as usize * self.size.y as usize);
+        let loc = IVec2::new(
+            (index as i32 % self.size.x) + self.offset.x,
+            (index as i32 / self.size.x) + self.offset.y,
+        );
+        grid.iter_breath_first(&loc, &IVec2::new(1, 0))
+            .find(|index| grid.data[*index].is_none())
+    }
 }
 
 #[cfg(test)]
@@ -282,16 +276,6 @@ mod test_grid {
     }
 
     #[test]
-    fn test_random() {
-        let mut grid = Grid::new(IVec2::new(2, 2));
-        assert_eq!(grid.random(1).is_some(), true);
-        assert_eq!(grid.random(2).is_some(), true);
-        assert_eq!(grid.random(3).is_some(), true);
-        assert_eq!(grid.random(4).is_some(), true);
-        assert_eq!(grid.random(5).is_some(), false);
-    }
-
-    #[test]
     fn test_a_star() {
         let grid = Grid::<()>::new(IVec2::new(5, 5));
         let path = grid.a_star(&IVec2::new(0, 0), &IVec2::new(4, 4), |cell| cell.is_none());
@@ -316,44 +300,6 @@ mod test_iter {
         assert_eq!(iter.next(), Some(4)); // (1, 1)
         assert_eq!(iter.next(), Some(5)); // (1, 2)
         assert_eq!(iter.next(), Some(6)); // (2, 0)
-        assert_eq!(iter.next(), Some(7)); // (2, 1)
-        assert_eq!(iter.next(), Some(8)); // (2, 2)
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn test_iter_from_index() {
-        let grid = Grid::<()>::new(IVec2::new(3, 3));
-        let mut iter = grid.iter_from_index(4);
-        assert_eq!(iter.next(), Some(4));
-        assert_eq!(iter.next(), Some(5));
-        assert_eq!(iter.next(), Some(6));
-        assert_eq!(iter.next(), Some(7));
-        assert_eq!(iter.next(), Some(8));
-        assert_eq!(iter.next(), Some(0));
-        assert_eq!(iter.next(), Some(1));
-        assert_eq!(iter.next(), Some(2));
-        assert_eq!(iter.next(), Some(3));
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn test_iter_square() {
-        let grid = Grid::<()>::new(IVec2::new(3, 3));
-        let mut iter = grid.iter_square(&IVec2::new(1, 1), &IVec2::new(3, 3));
-        assert_eq!(iter.next(), Some(4)); // (1, 1)
-        assert_eq!(iter.next(), Some(5)); // (1, 2)
-        assert_eq!(iter.next(), Some(7)); // (2, 1)
-        assert_eq!(iter.next(), Some(8)); // (2, 2)
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn test_iter_square_size() {
-        let grid = Grid::<()>::new(IVec2::new(3, 3));
-        let mut iter = grid.iter_square_size(&IVec2::new(1, 1), &IVec2::new(2, 2));
-        assert_eq!(iter.next(), Some(4)); // (1, 1)
-        assert_eq!(iter.next(), Some(5)); // (1, 2)
         assert_eq!(iter.next(), Some(7)); // (2, 1)
         assert_eq!(iter.next(), Some(8)); // (2, 2)
         assert_eq!(iter.next(), None);
