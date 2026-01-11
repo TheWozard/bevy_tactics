@@ -65,6 +65,7 @@ done
 
 echo "Output $count file(s)."
 
+# Available at: https://github.com/TheWozard/fix_png
 fix_png --glob "assets/tiles/*.png"
 
 echo "Edges fixed in PNG files."
