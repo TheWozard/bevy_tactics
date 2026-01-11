@@ -6,27 +6,10 @@ use super::unit;
 
 const GRID_SCALE: Vec2 = Vec2::splat(64.0);
 const UNIT_SCALE: f32 = 30.;
-const GRID_COLOR: Color = Color::srgb(0.5, 0.5, 0.5);
 const HEALTH_COLOR: Color = Color::srgb(0.0, 1.0, 0.0);
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_systems(Update, (units_gizmo, turn_order_gizmo, unit_health_gizmo));
-}
-
-fn grid_gizmo(mut gizmos: Gizmos, query: Query<(&Transform, &grid::Grid)>) {
-    for (transform, grid) in query.iter() {
-        gizmos.grid_2d(
-            Isometry2d::from_translation(transform.translation.truncate()),
-            grid.grid.size().as_uvec2(),
-            GRID_SCALE,
-            GRID_COLOR.with_alpha(0.2),
-        );
-        gizmos.rect_2d(
-            Isometry2d::from_translation(transform.translation.truncate()),
-            grid.grid.size().as_vec2() * GRID_SCALE,
-            GRID_COLOR,
-        );
-    }
 }
 
 fn grid_location(

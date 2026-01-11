@@ -28,9 +28,7 @@ pub fn baseline_app() -> App {
 
     #[cfg(debug_assertions)]
     {
-        app.add_plugins(EguiPlugin {
-            enable_multipass_for_primary_context: true,
-        });
+        app.add_plugins(EguiPlugin { ..default() });
         app.add_plugins(
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
         );

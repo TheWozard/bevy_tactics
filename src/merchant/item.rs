@@ -128,7 +128,7 @@ impl Holding {
                 log::info!("Updating target transform: {:?}", target_transform);
                 target_transform.translation.x = holding_transform.translation().x;
                 target_transform.translation.y = holding_transform.translation().y;
-                target_transform.translation.z = target_transform.translation.z;
+                // target_transform.translation.z = target_transform.translation.z;
             }
         }
     }
