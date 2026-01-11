@@ -5,6 +5,11 @@
 # This file contains environment-specific configuration like linker settings
 .cargo/config.toml
 # Assets are large, and mostly interested in learning the code.
-/assets
+/assets/*
+!/assets/tiles
+!/assets/shaders
+/assets/tiles/*
+!/assets/tiles/*.svg
+
 # AI stuff should be ignored
 CLAUDE.md

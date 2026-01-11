@@ -10,3 +10,6 @@ fix:
 
 test:
     cargo test --message-format short
+
+tiles:
+    bash scripts/convert_svg_to_png.sh 64 assets/tiles

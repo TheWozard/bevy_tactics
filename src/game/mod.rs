@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 
+mod drag_n_drop;
 mod game;
 mod gizmo;
 mod grid;
+mod tiles;
 mod unit;
 
 #[allow(dead_code)]
@@ -13,8 +15,9 @@ pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_plugins(gizmo::plugin);
     app.add_plugins(grid::plugin);
     app.add_plugins(unit::plugin);
+    app.add_plugins(drag_n_drop::plugin);
 
-    app.add_systems(Startup, init);
+    app.add_systems(Startup, (init, tiles::populate).chain());
 }
 
 fn init(mut commands: Commands) {

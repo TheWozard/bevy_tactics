@@ -54,7 +54,10 @@ pub fn text_style(assets: &AssetServer) -> impl Bundle {
 
 #[derive(Resource)]
 pub struct Sprites {
+    pub scale: f32,
     image: Handle<Image>,
+    tile: Handle<Image>,
+    unit: Handle<Image>,
     layout: Handle<TextureAtlasLayout>,
 }
 
@@ -69,7 +72,10 @@ impl Sprites {
         mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     ) {
         commands.insert_resource(Sprites {
+            scale: 64.0,
             image: asset_server.load("images/64x64.png"),
+            tile: asset_server.load("tiles/tile.png"),
+            unit: asset_server.load("tiles/unit.png"),
             layout: texture_atlas_layouts.add(TextureAtlasLayout::from_grid(
                 UVec2::splat(64),
                 16,
@@ -87,6 +93,20 @@ impl Sprites {
                 layout: self.layout.clone(),
                 index,
             }),
+            ..default()
+        }
+    }
+
+    pub fn tile_sprite(&self) -> Sprite {
+        Sprite {
+            image: self.tile.clone(),
+            ..default()
+        }
+    }
+
+    pub fn unit_bundle(&self) -> impl Bundle {
+        Sprite {
+            image: self.unit.clone(),
             ..default()
         }
     }

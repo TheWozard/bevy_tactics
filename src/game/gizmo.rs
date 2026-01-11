@@ -4,29 +4,26 @@ use super::game;
 use super::grid;
 use super::unit;
 
-const GRID_SCALE: Vec2 = Vec2::new(40., 40.);
+const GRID_SCALE: Vec2 = Vec2::splat(64.0);
 const UNIT_SCALE: f32 = 30.;
 const GRID_COLOR: Color = Color::srgb(0.5, 0.5, 0.5);
 const HEALTH_COLOR: Color = Color::srgb(0.0, 1.0, 0.0);
 
 pub fn plugin(app: &mut bevy::prelude::App) {
-    app.add_systems(
-        Update,
-        (grid_gizmo, units_gizmo, turn_order_gizmo, unit_health_gizmo),
-    );
+    app.add_systems(Update, (units_gizmo, turn_order_gizmo, unit_health_gizmo));
 }
 
 fn grid_gizmo(mut gizmos: Gizmos, query: Query<(&Transform, &grid::Grid)>) {
     for (transform, grid) in query.iter() {
         gizmos.grid_2d(
             Isometry2d::from_translation(transform.translation.truncate()),
-            grid.get_size().as_uvec2(),
+            grid.grid.size().as_uvec2(),
             GRID_SCALE,
             GRID_COLOR.with_alpha(0.2),
         );
         gizmos.rect_2d(
             Isometry2d::from_translation(transform.translation.truncate()),
-            grid.get_size().as_vec2() * GRID_SCALE,
+            grid.grid.size().as_vec2() * GRID_SCALE,
             GRID_COLOR,
         );
     }
@@ -38,7 +35,7 @@ fn grid_location(
     grid_location: impl Into<IVec2>,
 ) -> Isometry2d {
     let offset =
-        (grid.get_size().as_vec2() - 1.0) * 0.5 * GRID_SCALE + transform.translation.truncate();
+        (grid.grid.size().as_vec2() - 1.0) * 0.5 * GRID_SCALE + transform.translation.truncate();
     Isometry2d::from_translation(grid_location.into().as_vec2() * GRID_SCALE - offset)
 }
 
@@ -87,7 +84,7 @@ fn turn_order_gizmo(
                         grid_location(
                             transform,
                             grid,
-                            grid.get_size() + IVec2::new(indent, -offset),
+                            grid.grid.size() + IVec2::new(indent, -offset),
                         ),
                     );
                 }

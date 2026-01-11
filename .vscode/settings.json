@@ -6,4 +6,14 @@
     "workbench.editor.customLabels.patterns": {
         "**/mod.rs": "${dirname}/mod.rs"
     },
+    // Color picker support for Bevy Color::hsl() and Color::rgb()
+    "color-highlight.matchWords": true,
+    "color-highlight.languages": [
+        "rust"
+    ],
+    "color-highlight.markRuler": false,
+    "color-highlight.markerType": "dot-before",
+    "color-highlight.matchRgbWithNoFunction": false,
+    "editor.colorDecorators": true,
+    "editor.colorDecoratorsActivatedOn": "clickAndHover"
 }

@@ -71,7 +71,11 @@ impl<T> Grid<T> {
     }
 
     // Uses the passed iterator to find the location of the next available or used item.
-    pub fn find(&self, iter: &mut impl Iterator<Item = usize>, predicate: impl Fn(Option<&T>) -> bool) -> Option<IVec2> {
+    pub fn find(
+        &self,
+        iter: &mut impl Iterator<Item = usize>,
+        predicate: impl Fn(Option<&T>) -> bool,
+    ) -> Option<IVec2> {
         if let Some(index) = iter.find(|i| predicate(self.data[*i].as_ref())) {
             Some(self.location(index))
         } else {
@@ -79,12 +83,22 @@ impl<T> Grid<T> {
         }
     }
 
-    pub fn a_star(&self, start: &IVec2, end: &IVec2, predicate: impl Fn(Option<&T>) -> bool) -> Vec<IVec2> {
+    pub fn a_star(
+        &self,
+        start: &IVec2,
+        end: &IVec2,
+        predicate: impl Fn(Option<&T>) -> bool,
+    ) -> Vec<IVec2> {
         if let Some((path, _)) = astar(
             start,
             |p| {
                 let mut successors = Vec::new();
-                for dir in [IVec2::new(1, 0), IVec2::new(-1, 0), IVec2::new(0, 1), IVec2::new(0, -1)] {
+                for dir in [
+                    IVec2::new(1, 0),
+                    IVec2::new(-1, 0),
+                    IVec2::new(0, 1),
+                    IVec2::new(0, -1),
+                ] {
                     let next = p + dir;
                     if self.within(&next) && (&next == end || predicate(self.get(&next))) {
                         successors.push((next, 1));
@@ -101,6 +115,14 @@ impl<T> Grid<T> {
         }
     }
 
+    // Converts an iterator of indices to an iterator of Vec3, applying the specified scale.
+    pub fn index_to_transform(&self, index: usize, scale: f32) -> Vec3 {
+        let scale = Vec2::splat(scale);
+        let scale_offset = ((self.size.as_vec2() * scale) - scale) / 2.0;
+        let loc = self.location(index);
+        ((loc.as_vec2() * scale) - scale_offset).extend(0.0)
+    }
+
     // --- Iterators ---
 
     pub fn iter_entire_grid(&self) -> impl Iterator<Item = usize> + use<T> {
@@ -115,15 +137,27 @@ impl<T> Grid<T> {
         let x_range = start.x.max(0)..end.x.min(self.size.x);
         let y_range = start.y.max(0)..end.y.min(self.size.y);
         let size = self.size;
-        y_range.flat_map(move |y| x_range.clone().map(move |x| vec_to_index(&size, &IVec2::new(x, y))))
+        y_range.flat_map(move |y| {
+            x_range
+                .clone()
+                .map(move |x| vec_to_index(&size, &IVec2::new(x, y)))
+        })
     }
 
-    pub fn iter_square_size(&self, start: &IVec2, size: &IVec2) -> impl Iterator<Item = usize> + use<T> {
+    pub fn iter_square_size(
+        &self,
+        start: &IVec2,
+        size: &IVec2,
+    ) -> impl Iterator<Item = usize> + use<T> {
         self.iter_square(&start, &(start + size))
     }
 
     // Breath-first iterator that explores the grid breath-first from a starting point in a given direction.
-    pub fn iter_breath_first(&self, start: &IVec2, direction: &IVec2) -> impl Iterator<Item = usize> + use<T> {
+    pub fn iter_breath_first(
+        &self,
+        start: &IVec2,
+        direction: &IVec2,
+    ) -> impl Iterator<Item = usize> + use<T> {
         let mut queue = VecDeque::with_capacity(self.data.len());
         queue.push_back(start.clone());
         let mut visited = vec![false; (self.size.x * self.size.y) as usize];
@@ -139,14 +173,35 @@ impl<T> Grid<T> {
                 if !visited[index] {
                     visited[index] = true;
                     queue.extend(
-                        [current + dir, current + rotated, current - dir, current - rotated]
-                            .into_iter()
-                            .filter(|&loc| vec_within(&size, &loc) && !visited[vec_to_index(&size, &loc)]),
+                        [
+                            current + dir,
+                            current + rotated,
+                            current - dir,
+                            current - rotated,
+                        ]
+                        .into_iter()
+                        .filter(|&loc| {
+                            vec_within(&size, &loc) && !visited[vec_to_index(&size, &loc)]
+                        }),
                     );
                     return Some(index);
                 }
             }
             None
+        })
+    }
+
+    // Converts an iterator of indices to an iterator of Transforms, applying the specified scale.
+    pub fn iter_to_transform(
+        &self,
+        iter: impl Iterator<Item = usize>,
+        scale: f32,
+    ) -> impl Iterator<Item = Vec3> {
+        let scale = Vec2::splat(scale);
+        let scale_offset = ((self.size.as_vec2() * scale) - scale) / 2.0;
+        iter.map(move |index| {
+            let loc = self.location(index);
+            ((loc.as_vec2() * scale) - scale_offset).extend(0.0)
         })
     }
 
@@ -165,7 +220,10 @@ impl<T> Grid<T> {
     // The index is wrapped around the grid size to ensure it stays within bounds.
     fn location(&self, mut index: usize) -> IVec2 {
         index = index % self.data.len();
-        IVec2::new((index % self.size.x as usize) as i32, (index / self.size.x as usize) as i32)
+        IVec2::new(
+            (index % self.size.x as usize) as i32,
+            (index / self.size.x as usize) as i32,
+        )
     }
 }
 
@@ -183,11 +241,26 @@ mod test_grid {
 
     #[test]
     fn test_within() {
-        assert_eq!(Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(0, 0)), true);
-        assert_eq!(Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(1, 1)), true);
-        assert_eq!(Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(2, 2)), true);
-        assert_eq!(Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(3, 3)), false);
-        assert_eq!(Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(-1, -1)), false);
+        assert_eq!(
+            Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(0, 0)),
+            true
+        );
+        assert_eq!(
+            Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(1, 1)),
+            true
+        );
+        assert_eq!(
+            Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(2, 2)),
+            true
+        );
+        assert_eq!(
+            Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(3, 3)),
+            false
+        );
+        assert_eq!(
+            Grid::<()>::new(IVec2::new(3, 3)).within(&IVec2::new(-1, -1)),
+            false
+        );
     }
 
     #[test]

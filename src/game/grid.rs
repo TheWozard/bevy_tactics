@@ -1,4 +1,5 @@
-use bevy::{ecs::relationship::Relationship, prelude::*};
+use bevy::ecs::relationship::Relationship;
+use bevy::prelude::*;
 
 use super::utils;
 
@@ -15,7 +16,7 @@ pub fn plugin(app: &mut App) {
 #[derive(Component, Clone, Debug, Reflect)]
 #[require(Transform, Name::new("Grid"))]
 pub struct Grid {
-    grid: utils::Grid<Entity>,
+    pub grid: utils::Grid<Entity>,
 }
 
 #[derive(Clone, Debug, Reflect)]
@@ -30,14 +31,20 @@ impl Grid {
         }
     }
 
-    pub fn get_size(&self) -> IVec2 {
-        self.grid.size()
-    }
-
-    pub fn spawn(&mut self, commands: &mut Commands, location: &IVec2, bundle: impl Bundle) -> Option<Entity> {
+    pub fn spawn(
+        &mut self,
+        commands: &mut Commands,
+        location: &IVec2,
+        bundle: impl Bundle,
+    ) -> Option<Entity> {
         if self.grid.get(location).is_none() {
             self.grid
-                .set(location, commands.spawn((GridLocation::new(location.clone()), bundle)).id())
+                .set(
+                    location,
+                    commands
+                        .spawn((GridLocation::new(location.clone()), bundle))
+                        .id(),
+                )
                 .copied()
         } else {
             None
@@ -63,7 +70,12 @@ impl Grid {
         self.grid.take(location);
     }
 
-    pub fn find(&self, location: &IVec2, direction: &IVec2, predicate: impl Fn(Entity) -> bool) -> Option<IVec2> {
+    pub fn find(
+        &self,
+        location: &IVec2,
+        direction: &IVec2,
+        predicate: impl Fn(Entity) -> bool,
+    ) -> Option<IVec2> {
         let mut iter = self.grid.iter_breath_first(location, direction).skip(1);
         while let Some(location) = self.grid.find(&mut iter, |v| v.is_some()) {
             if let Some(entity) = self.grid.get(&location) {
