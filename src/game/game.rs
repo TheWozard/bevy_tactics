@@ -4,7 +4,9 @@ use bevy::prelude::*;
 use super::grid;
 use super::unit;
 use crate::game::animate::Lerp;
+use crate::game::effect;
 use crate::theme;
+use crate::util::cords;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_systems(
@@ -94,6 +96,7 @@ impl TurnOrder {
     pub fn move_entity(
         mut commands: Commands,
         mut events: EventReader<Turn>,
+        mut effects: EventWriter<crate::game::effect::Effect>,
         mut unit_query: Query<(
             Entity,
             &Transform,
@@ -101,6 +104,7 @@ impl TurnOrder {
             &unit::Movement,
             &grid::GridOwner,
             &unit::Unit,
+            &unit::Attacks,
         )>,
         mut target_query: Query<(&mut unit::Health, &unit::Unit)>,
         mut grid_query: Query<&mut grid::Grid>,
@@ -108,7 +112,7 @@ impl TurnOrder {
         sprites: Res<theme::Sprites>,
     ) {
         for event in events.read() {
-            if let Ok((entity, transform, mut grid_location, movement, grid_owner, unit)) =
+            if let Ok((entity, transform, mut grid_location, movement, grid_owner, unit, attacks)) =
                 unit_query.get_mut(event.entity)
             {
                 if let Ok(mut grid) = grid_query.get_mut(grid_owner.get()) {
@@ -124,7 +128,14 @@ impl TurnOrder {
                             if let Some(target) = grid.get(&nearest) {
                                 if let Ok((mut health, target)) = target_query.get_mut(target) {
                                     if target.team != unit.team {
-                                        health.damage(1);
+                                        health.damage(1 * attacks.damage);
+                                        let source = transform.translation.truncate();
+                                        let target =
+                                            grid.grid.location_to_vec2(&nearest, sprites.scale);
+                                        effects.write(effect::Effect::Damage(
+                                            cords::percent_between(source, target, 0.25),
+                                            cords::percent_between(source, target, 0.75),
+                                        ));
                                     }
                                 }
                             }

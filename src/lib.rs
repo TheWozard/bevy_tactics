@@ -10,6 +10,7 @@ pub mod random;
 pub mod skilltree;
 pub mod theme;
 pub mod ui;
+pub mod util;
 
 pub fn baseline_app() -> App {
     let mut app = App::new();

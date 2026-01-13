@@ -52,6 +52,38 @@ pub fn text_style(assets: &AssetServer) -> impl Bundle {
     )
 }
 
+pub enum Anchor {
+    Center,
+    BottomCenter,
+}
+
+pub struct Texture {
+    handle: Handle<Image>,
+    size: Vec2,
+    anchor: Anchor,
+}
+
+impl Texture {
+    pub fn sprite(&self) -> Sprite {
+        Sprite {
+            image: self.handle.clone(),
+            custom_size: Some(self.size),
+            ..default()
+        }
+    }
+
+    pub fn offset(&self) -> Vec2 {
+        match self.anchor {
+            Anchor::Center => self.size * -0.5,
+            Anchor::BottomCenter => Vec2::new(self.size.x * 0.5, 0.0),
+        }
+    }
+
+    pub fn translation(&self, position: &Vec3) -> Vec3 {
+        position + self.offset().extend(0.0)
+    }
+}
+
 #[derive(Resource)]
 pub struct Sprites {
     pub scale: f32,
@@ -59,6 +91,8 @@ pub struct Sprites {
     tile: Handle<Image>,
     unit: Handle<Image>,
     layout: Handle<TextureAtlasLayout>,
+
+    pub attack: Texture,
 }
 
 impl Sprites {
@@ -71,8 +105,9 @@ impl Sprites {
         asset_server: Res<AssetServer>,
         mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     ) {
+        let scale = 16.0;
         commands.insert_resource(Sprites {
-            scale: 16.0,
+            scale: scale,
             image: asset_server.load("images/64x64.png"),
             tile: asset_server.load("tiles/tile.png"),
             unit: asset_server.load("tiles/unit.png"),
@@ -83,6 +118,12 @@ impl Sprites {
                 None,
                 None,
             )),
+
+            attack: Texture {
+                handle: asset_server.load("tiles/attack.png"),
+                size: Vec2::splat(scale / 2.0),
+                anchor: Anchor::Center,
+            },
         });
     }
 

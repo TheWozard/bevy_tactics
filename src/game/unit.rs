@@ -66,3 +66,14 @@ impl Speed {
         Speed { value }
     }
 }
+
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct Attacks {
+    pub damage: u32,
+}
+
+impl Attacks {
+    pub fn new(damage: u32) -> Self {
+        Attacks { damage }
+    }
+}

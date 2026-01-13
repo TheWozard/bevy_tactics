@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 mod animate;
+mod effect;
 mod game;
 mod gizmo;
 mod grid;
@@ -11,11 +12,13 @@ mod utils;
 use crate::theme::Sprites;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
+    app.add_plugins(animate::plugin);
+    app.add_plugins(effect::plugin);
     app.add_plugins(game::plugin);
     app.add_plugins(gizmo::plugin);
     app.add_plugins(grid::plugin);
+    app.add_plugins(tiles::plugin);
     app.add_plugins(unit::plugin);
-    app.add_plugins(animate::plugin);
 
     app.add_systems(Startup, (init, tiles::populate).chain());
 }
@@ -26,11 +29,10 @@ fn init(mut commands: Commands, sprites: Res<Sprites>) {
     let mut grid = grid::Grid::new(size);
 
     let step_range = 2..4;
-    let units = 100;
 
     let spawn_space = IVec2::new(size.x, size.y / 3);
     let team_1_spaces = utils::SquareSelection::new(IVec2::ZERO, spawn_space);
-    for _ in 0..units {
+    for _ in 0..4 {
         if let Some(index) = team_1_spaces.random_open(&grid.grid) {
             let enemy = grid.spawn(
                 &mut commands,
@@ -45,8 +47,9 @@ fn init(mut commands: Commands, sprites: Res<Sprites>) {
                     },
                     unit::Unit { team: 1 },
                     unit::Movement::new(rand::random_range(step_range.clone())),
-                    unit::Health::new(3),
+                    unit::Health::new(50),
                     unit::Speed::new(1),
+                    unit::Attacks::new(3),
                 ),
             );
             commands
@@ -59,7 +62,7 @@ fn init(mut commands: Commands, sprites: Res<Sprites>) {
         IVec2::new(0, grid.grid.size().y - spawn_space.y),
         grid.grid.size(),
     );
-    for _ in 0..units {
+    for _ in 0..100 {
         if let Some(index) = team_2_spaces.random_open(&grid.grid) {
             let enemy = grid.spawn(
                 &mut commands,
@@ -76,6 +79,7 @@ fn init(mut commands: Commands, sprites: Res<Sprites>) {
                     unit::Movement::new(rand::random_range(step_range.clone())),
                     unit::Health::new(3),
                     unit::Speed::new(2),
+                    unit::Attacks::new(1),
                 ),
             );
             commands
