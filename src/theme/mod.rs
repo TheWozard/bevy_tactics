@@ -11,7 +11,7 @@ const BACKGROUND_COLOR: Color = Color::hsva(0.0, 0.0, 0.5, 1.0);
 const TEXT_COLOR: Color = Color::hsva(0.0, 0.0, 0.0, 1.0);
 
 const PADDING_UNIT: f32 = 10.0;
-const RADIUS_UNIT: f32 = 5.0;
+// const RADIUS_UNIT: f32 = 5.0;
 
 pub fn baseline() -> impl Bundle {
     (
@@ -37,7 +37,7 @@ pub fn styled_span() -> impl Bundle {
             ..default()
         },
         BackgroundColor(BACKGROUND_COLOR),
-        BorderRadius::all(Val::Px(RADIUS_UNIT)),
+        // BorderRadius::all(Val::Px(RADIUS_UNIT)),
     )
 }
 

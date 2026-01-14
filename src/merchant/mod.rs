@@ -26,7 +26,6 @@ pub fn plugin(app: &mut App) {
     app.add_plugins(item::plugin);
 
     app.init_resource::<ShopOpenTimer>();
-    app.add_event::<ShopOpen>();
     app.add_systems(
         Update,
         (ShopOpenTimer::start, ShopOpenTimer::tick)
@@ -68,7 +67,7 @@ impl Default for ShopOpenTimer {
 
 impl ShopOpenTimer {
     pub fn is_open(&self) -> bool {
-        !self.0.finished() && !self.0.paused() && self.0.elapsed_secs() > 0.0
+        !self.0.is_finished() && !self.0.is_paused() && self.0.elapsed_secs() > 0.0
     }
 
     pub fn fraction(&self) -> f32 {
@@ -164,14 +163,14 @@ impl<T: Resource + TrackableResource + Default> TrackedResource<T> {
     }
 
     fn observer(
-        trigger: Trigger<OnAdd, Self>,
+        trigger: On<Add, Self>,
         resource: Res<T>,
         query: Query<&TrackedResource<T>>,
         mut commands: Commands,
     ) {
-        if let Ok(tracked) = query.get(trigger.target()) {
+        if let Ok(tracked) = query.get(trigger.event_target()) {
             commands
-                .entity(trigger.target())
+                .entity(trigger.event_target())
                 .insert(Text::new(tracked.text(&resource)));
         }
     }

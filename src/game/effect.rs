@@ -6,9 +6,7 @@ use crate::util::cords;
 const EFFECT_Z_LAYER: f32 = 900.0;
 
 pub fn plugin(app: &mut App) {
-    app.add_event::<Effect>();
-
-    app.add_systems(Update, spawn_effects);
+    app.add_observer(spawn_effect);
     app.add_systems(Update, (process_effects, update_curves).chain());
 }
 
@@ -30,33 +28,28 @@ impl EffectTimer {
     }
 }
 
-fn spawn_effects(
-    mut commands: Commands,
-    mut effect_events: EventReader<Effect>,
-    sprites: Res<theme::Sprites>,
-) {
-    for effect in effect_events.read() {
-        commands.spawn(match effect {
-            Effect::Damage(from, to) => {
-                let from = from.extend(EFFECT_Z_LAYER);
-                let to = to.extend(EFFECT_Z_LAYER);
-                (
-                    EffectTimer::new(0.1),
-                    Transform::from_translation(from).with_rotation(cords::quad_to(from, to)),
-                    EffectTranslationCurves {
-                        curves: vec![
-                            EasingCurve::new(from, to, EaseFunction::CubicOut),
-                            EasingCurve::new(to, from, EaseFunction::CubicIn),
-                        ],
-                    },
-                    Sprite {
-                        ..sprites.attack.sprite()
-                    },
-                    Name::new("DamageEffect"),
-                )
-            }
-        });
-    }
+fn spawn_effect(trigger: On<Effect>, mut commands: Commands, sprites: Res<theme::Sprites>) {
+    let effect = trigger.event();
+    commands.spawn(match effect {
+        Effect::Damage(from, to) => {
+            let from = from.extend(EFFECT_Z_LAYER);
+            let to = to.extend(EFFECT_Z_LAYER);
+            (
+                EffectTimer::new(0.1),
+                Transform::from_translation(from).with_rotation(cords::quad_to(from, to)),
+                EffectTranslationCurves {
+                    curves: vec![
+                        EasingCurve::new(from, to, EaseFunction::CubicOut),
+                        EasingCurve::new(to, from, EaseFunction::CubicIn),
+                    ],
+                },
+                Sprite {
+                    ..sprites.attack.sprite()
+                },
+                Name::new("DamageEffect"),
+            )
+        }
+    });
 }
 
 fn process_effects(
@@ -66,7 +59,7 @@ fn process_effects(
 ) {
     for (entity, mut effect_instance) in query.iter_mut() {
         effect_instance.timer.tick(time.delta());
-        if effect_instance.timer.finished() {
+        if effect_instance.timer.is_finished() {
             commands.entity(entity).despawn();
         }
     }

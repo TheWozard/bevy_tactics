@@ -112,11 +112,11 @@ impl Grid {
 }
 
 fn on_remove_grid_location(
-    trigger: Trigger<OnRemove, GridLocation>,
+    trigger: On<Remove, GridLocation>,
     location_query: Query<(&GridLocation, &GridOwner)>,
     mut grid_query: Query<&mut Grid>,
 ) {
-    if let Ok((grid_location, grid_owned)) = location_query.get(trigger.target()) {
+    if let Ok((grid_location, grid_owned)) = location_query.get(trigger.event_target()) {
         if let Ok(mut grid) = grid_query.get_mut(grid_owned.get()) {
             grid.clear(grid_location.as_ivec2());
         }

@@ -7,9 +7,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 pub mod game;
 pub mod merchant;
 pub mod random;
-pub mod skilltree;
 pub mod theme;
-pub mod ui;
 pub mod util;
 
 pub fn baseline_app() -> App {
@@ -50,6 +48,6 @@ fn camera_setup(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 
-fn exit_condition(mut app_exit_events: EventWriter<AppExit>) {
+fn exit_condition(mut app_exit_events: MessageWriter<AppExit>) {
     app_exit_events.write(AppExit::Success);
 }

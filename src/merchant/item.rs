@@ -50,11 +50,11 @@ struct Item;
 struct DropLocation;
 
 // An observer listener that changes the target entity's color.
-fn recolor_on<E: Debug + Clone + Reflect, T: Component>(
+fn recolor_on<E: EntityEvent + Debug + Clone + Reflect, T: Component>(
     color: Color,
-) -> impl Fn(Trigger<E>, Query<&mut Sprite, With<T>>) {
+) -> impl Fn(On<E>, Query<&mut Sprite, With<T>>) {
     move |ev, mut sprites| {
-        if let Ok(mut sprite) = sprites.get_mut(ev.target()) {
+        if let Ok(mut sprite) = sprites.get_mut(ev.event_target()) {
             sprite.color = color;
         }
     }
@@ -77,26 +77,26 @@ impl<U: Component, D: Component, R: Relationship> Drag<U, D, R> {
     }
 
     fn start_drag(
-        event: Trigger<Pointer<Pressed>>,
+        event: On<Pointer<Press>>,
         mut drag: ResMut<Self>,
         query: Query<Entity, With<U>>,
     ) {
-        if let Ok(_) = query.get(event.target()) {
-            drag.target = Some(event.target());
+        if let Ok(_) = query.get(event.event_target()) {
+            drag.target = Some(event.event_target());
         }
     }
 
     fn end_drag(
-        event: Trigger<Pointer<Released>>,
+        event: On<Pointer<Release>>,
         mut commands: Commands,
         drag: Res<Self>,
         query: Query<Entity, With<D>>,
     ) {
         if let Some(dragging) = drag.target {
-            if let Ok(_) = query.get(event.target()) {
+            if let Ok(_) = query.get(event.event_target()) {
                 commands
                     .entity(dragging)
-                    .replace_related::<R>(&[event.target()]);
+                    .replace_related::<R>(&[event.event_target()]);
             }
         }
     }

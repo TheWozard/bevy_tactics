@@ -1,8 +1,8 @@
 game:
     cargo run --bin game
 
-ui:
-    cargo run --bin ui
+merchant:
+    cargo run --bin merchant
 
 test:
     cargo test --message-format short
