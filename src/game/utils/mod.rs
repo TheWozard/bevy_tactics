@@ -120,11 +120,12 @@ impl<T> Grid<T> {
         0..self.data.len()
     }
 
-    // Breath-first iterator that explores the grid breath-first from a starting point in a given direction.
+    // Breath-first iterator that explores the grid breath-first from a starting point starting in a given direction.
     pub fn iter_breath_first(
         &self,
         start: &IVec2,
         direction: &IVec2,
+        selection: SelectionShape,
     ) -> impl Iterator<Item = usize> + use<T> {
         let mut queue = VecDeque::with_capacity(self.data.len());
         queue.push_back(start.clone());
@@ -142,7 +143,7 @@ impl<T> Grid<T> {
                 if index >= len {
                     continue;
                 }
-                if !visited[index] {
+                if !visited[index] && selection.contains(&current) {
                     visited[index] = true;
                     queue.extend(
                         [
@@ -224,8 +225,24 @@ impl SquareSelection {
             (index as i32 % self.size.x) + self.offset.x,
             (index as i32 / self.size.x) + self.offset.y,
         );
-        grid.iter_breath_first(&loc, &IVec2::new(1, 0))
+        grid.iter_breath_first(&loc, &IVec2::new(1, 0), SelectionShape::All)
             .find(|index| grid.data[*index].is_none())
+    }
+}
+
+pub enum SelectionShape {
+    All,
+    Circle(Vec2, f32),
+}
+
+impl SelectionShape {
+    pub fn contains(&self, location: &IVec2) -> bool {
+        match self {
+            SelectionShape::All => true,
+            SelectionShape::Circle(center, radius) => {
+                center.distance_squared(location.as_vec2()) <= radius * radius
+            }
+        }
     }
 }
 
@@ -308,7 +325,8 @@ mod test_iter {
     #[test]
     fn test_iter_breath_first() {
         let grid = Grid::<()>::new(IVec2::new(3, 3));
-        let mut iter = grid.iter_breath_first(&IVec2::new(1, 1), &IVec2::new(1, 0));
+        let mut iter =
+            grid.iter_breath_first(&IVec2::new(1, 1), &IVec2::new(1, 0), SelectionShape::All);
         assert_eq!(iter.next(), Some(4)); // (1, 1)
         assert_eq!(iter.next(), Some(5)); // (2, 1)
         assert_eq!(iter.next(), Some(7)); // (1, 2)
@@ -324,7 +342,8 @@ mod test_iter {
     #[test]
     fn test_iter_breath_first_corner() {
         let grid = Grid::<()>::new(IVec2::new(3, 3));
-        let mut iter = grid.iter_breath_first(&IVec2::new(0, 0), &IVec2::new(1, 0));
+        let mut iter =
+            grid.iter_breath_first(&IVec2::new(0, 0), &IVec2::new(1, 0), SelectionShape::All);
         assert_eq!(iter.next(), Some(0)); // (0, 0)
         assert_eq!(iter.next(), Some(1)); // (1, 0)
         assert_eq!(iter.next(), Some(3)); // (0, 1)

@@ -93,6 +93,7 @@ pub struct Sprites {
     layout: Handle<TextureAtlasLayout>,
 
     pub attack: Texture,
+    pub swing: Texture,
 }
 
 impl Sprites {
@@ -122,6 +123,12 @@ impl Sprites {
             attack: Texture {
                 handle: asset_server.load("tiles/attack.png"),
                 size: Vec2::splat(scale / 2.0),
+                anchor: Anchor::Center,
+            },
+
+            swing: Texture {
+                handle: asset_server.load("tiles/swing.png"),
+                size: Vec2::new(scale / 4.0, scale / 2.0),
                 anchor: Anchor::Center,
             },
         });

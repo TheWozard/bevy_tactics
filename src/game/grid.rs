@@ -74,9 +74,13 @@ impl Grid {
         &self,
         location: &IVec2,
         direction: &IVec2,
+        selection: utils::SelectionShape,
         predicate: impl Fn(Entity) -> bool,
     ) -> Option<IVec2> {
-        let mut iter = self.grid.iter_breath_first(location, direction).skip(1);
+        let mut iter = self
+            .grid
+            .iter_breath_first(location, direction, selection)
+            .skip(1);
         while let Some(location) = self.grid.find(&mut iter, |v| v.is_some()) {
             if let Some(entity) = self.grid.get(&location) {
                 if predicate(entity.clone()) {
@@ -136,6 +140,10 @@ impl GridLocation {
 
     pub fn as_ivec2(&self) -> &IVec2 {
         &self.location
+    }
+
+    pub fn as_vec2(&self) -> Vec2 {
+        self.location.as_vec2()
     }
 }
 

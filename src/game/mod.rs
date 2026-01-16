@@ -49,7 +49,7 @@ fn init(mut commands: Commands, sprites: Res<Sprites>) {
                     unit::Movement::new(rand::random_range(step_range.clone())),
                     unit::Health::new(50),
                     unit::Speed::new(1),
-                    unit::Attacks::new(3),
+                    unit::Attacks::new(3, 10),
                 ),
             );
             commands
@@ -79,7 +79,7 @@ fn init(mut commands: Commands, sprites: Res<Sprites>) {
                     unit::Movement::new(rand::random_range(step_range.clone())),
                     unit::Health::new(3),
                     unit::Speed::new(2),
-                    unit::Attacks::new(1),
+                    unit::Attacks::new(1, 1),
                 ),
             );
             commands

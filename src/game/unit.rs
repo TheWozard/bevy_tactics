@@ -70,10 +70,14 @@ impl Speed {
 #[derive(Component, Clone, Debug, Reflect)]
 pub struct Attacks {
     pub damage: u32,
+    pub range: f32,
 }
 
 impl Attacks {
-    pub fn new(damage: u32) -> Self {
-        Attacks { damage }
+    pub fn new(damage: u32, range: u32) -> Self {
+        Attacks {
+            damage,
+            range: range as f32,
+        }
     }
 }

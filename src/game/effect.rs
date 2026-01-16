@@ -12,7 +12,8 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Event, Clone, Debug, Reflect)]
 pub enum Effect {
-    Damage(Vec2, Vec2),
+    Swing(Vec2, Vec2),
+    Shoot(Vec2, Vec2),
 }
 
 #[derive(Component)]
@@ -31,11 +32,11 @@ impl EffectTimer {
 fn spawn_effect(trigger: On<Effect>, mut commands: Commands, sprites: Res<theme::Sprites>) {
     let effect = trigger.event();
     commands.spawn(match effect {
-        Effect::Damage(from, to) => {
+        Effect::Swing(from, to) => {
             let from = from.extend(EFFECT_Z_LAYER);
             let to = to.extend(EFFECT_Z_LAYER);
             (
-                EffectTimer::new(0.1),
+                EffectTimer::new(0.2),
                 Transform::from_translation(from).with_rotation(cords::quad_to(from, to)),
                 EffectTranslationCurves {
                     curves: vec![
@@ -44,6 +45,23 @@ fn spawn_effect(trigger: On<Effect>, mut commands: Commands, sprites: Res<theme:
                     ],
                 },
                 Sprite {
+                    color: Color::linear_rgb(1.0, 0.0, 0.0),
+                    ..sprites.swing.sprite()
+                },
+                Name::new("DamageEffect"),
+            )
+        }
+        Effect::Shoot(from, to) => {
+            let from = from.extend(EFFECT_Z_LAYER);
+            let to = to.extend(EFFECT_Z_LAYER);
+            (
+                EffectTimer::new(0.2),
+                Transform::from_translation(from).with_rotation(cords::quad_to(from, to)),
+                EffectTranslationCurves {
+                    curves: vec![EasingCurve::new(from, to, EaseFunction::Linear)],
+                },
+                Sprite {
+                    color: Color::linear_rgb(0.0, 1.0, 0.0),
                     ..sprites.attack.sprite()
                 },
                 Name::new("DamageEffect"),
