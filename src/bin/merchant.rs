@@ -1,5 +1,5 @@
 fn main() {
-    let mut app = bevy_learning::baseline_app();
-    app.add_plugins(bevy_learning::merchant::plugin);
+    let mut app = bevy_tactics::baseline_app();
+    app.add_plugins(bevy_tactics::merchant::plugin);
     app.run();
 }

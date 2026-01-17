@@ -388,19 +388,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy-learning"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy-inspector-egui",
- "log",
- "pathfinding",
- "rand",
- "rand_chacha",
- "tracing",
-]
-
-[[package]]
 name = "bevy_a11y"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1435,6 +1422,19 @@ dependencies = [
  "bevy_macro_utils",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "bevy_tactics"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy-inspector-egui",
+ "log",
+ "pathfinding",
+ "rand",
+ "rand_chacha",
+ "tracing",
 ]
 
 [[package]]

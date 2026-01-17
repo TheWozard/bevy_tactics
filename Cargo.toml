@@ -1,6 +1,6 @@
 [package]
-name = "bevy-learning"
-authors = ["Dan Bond <dan620@gmail.com>"]
+name = "bevy_tactics"
+authors = ["Christopher Bond <dan620@gmail.com>"]
 version = "0.1.0"
 edition = "2024"
 default-run = "game"
