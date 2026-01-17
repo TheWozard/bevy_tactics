@@ -1,3 +1,5 @@
+use bevy::input::mouse::MouseScrollUnit;
+use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -6,6 +8,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(Startup, spawn_camera);
     app.add_systems(Update, control_camera);
+    app.add_systems(Update, camera_zoom);
 }
 
 fn spawn_camera(mut commands: Commands) {
@@ -87,6 +90,27 @@ fn control_camera(
                 transform.translation += controller.velocity * time.delta_secs();
                 controller.velocity *= controls.drag.powf(time.delta_secs());
             }
+        }
+    }
+}
+
+fn camera_zoom(
+    mut input: MessageReader<MouseWheel>,
+    mut query: Query<&mut Projection, With<ControlledCamera>>,
+) {
+    for mut camera in query.iter_mut() {
+        match &mut *camera {
+            Projection::Orthographic(ortho) => {
+                for event in input.read() {
+                    let scroll_amount = match event.unit {
+                        MouseScrollUnit::Line => event.y * 0.1,
+                        MouseScrollUnit::Pixel => event.y * 0.001,
+                    };
+                    ortho.scale -= scroll_amount;
+                    ortho.scale = ortho.scale.clamp(0.1, 10.0);
+                }
+            }
+            _ => {}
         }
     }
 }
