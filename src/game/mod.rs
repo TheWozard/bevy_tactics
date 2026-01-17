@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 mod animate;
+mod camera;
 mod effect;
 mod game;
 mod gizmo;
@@ -13,6 +14,7 @@ use crate::theme::Sprites;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_plugins(animate::plugin);
+    app.add_plugins(camera::plugin);
     app.add_plugins(effect::plugin);
     app.add_plugins(game::plugin);
     app.add_plugins(gizmo::plugin);

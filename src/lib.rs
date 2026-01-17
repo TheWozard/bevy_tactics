@@ -33,7 +33,7 @@ pub fn baseline_app() -> App {
         );
     }
 
-    app.add_systems(Startup, camera_setup);
+    // app.add_systems(Startup, camera_setup);
     app.add_systems(
         Update,
         exit_condition.run_if(input_just_pressed(KeyCode::Escape)),
@@ -44,9 +44,9 @@ pub fn baseline_app() -> App {
     app
 }
 
-fn camera_setup(mut commands: Commands) {
-    commands.spawn(Camera2d);
-}
+// fn camera_setup(mut commands: Commands) {
+//     commands.spawn(Camera2d);
+// }
 
 fn exit_condition(mut app_exit_events: MessageWriter<AppExit>) {
     app_exit_events.write(AppExit::Success);
