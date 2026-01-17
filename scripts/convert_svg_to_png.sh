@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to convert all SVG files to PNG format
-# Requires rsvg-convert (install via: brew install librsvg)
+# Requires inkscape (install via: sudo apt install inkscape / brew install inkscape)
 # Usage: convert_svg_to_png.sh <scale> <svg_dir> [output_dir]
 
 # Configuration
@@ -18,10 +18,10 @@ if [ -z "$SCALE" ] || [ -z "$SVG_DIR" ]; then
     exit 1
 fi
 
-# Check if rsvg-convert is installed
-if ! command -v rsvg-convert &> /dev/null; then
-    echo "Error: rsvg-convert is not installed"
-    echo "Install it using: brew install librsvg"
+# Check if inkscape is installed
+if ! command -v inkscape &> /dev/null; then
+    echo "Error: inkscape is not installed"
+    echo "Install it using: sudo apt install inkscape (Linux) or brew install inkscape (macOS)"
     exit 1
 fi
 
@@ -54,7 +54,7 @@ for svg_file in "$SVG_DIR"/*.svg; do
     echo "Processing $basename: ${svg_width}x${svg_height} -> ${output_width}x${output_height}"
 
     # Convert with calculated dimensions
-    rsvg-convert -w "$output_width" -h "$output_height" "$svg_file" -o "$png_file"
+    inkscape "$svg_file" --export-filename="$png_file" --export-width="$output_width" --export-height="$output_height"
 
     if [ $? -eq 0 ]; then
         ((count++))
