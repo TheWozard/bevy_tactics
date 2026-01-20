@@ -29,7 +29,7 @@ impl EffectTimer {
     }
 }
 
-fn spawn_effect(trigger: On<Effect>, mut commands: Commands, sprites: Res<theme::Sprites>) {
+fn spawn_effect(trigger: On<Effect>, mut commands: Commands, sprites: Res<theme::Textures>) {
     let effect = trigger.event();
     commands.spawn(match effect {
         Effect::Swing(from, to) => {

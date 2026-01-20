@@ -226,7 +226,7 @@ fn do_move(
         &grid::GridOwner,
     )>,
     mut grid_query: Query<&mut grid::Grid>,
-    sprites: Res<theme::Sprites>,
+    sprites: Res<theme::Textures>,
 ) {
     if let Ok((transform, location, movement, grid_owner)) = unit_query.get(trigger.event_target())
     {

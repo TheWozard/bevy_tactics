@@ -1,23 +1,25 @@
-use bevy::prelude::*;
+use bevy::{ecs::query, prelude::*};
 
 use super::grid;
-use crate::theme::Sprites;
+use crate::theme::Textures;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
-    // app.add_systems(Update, color);
+    app.add_observer(populate_grid);
 }
 
-pub fn populate(mut commands: Commands, grid_query: Query<&mut grid::Grid>, sprites: Res<Sprites>) {
-    if let Ok(grid) = grid_query.single() {
+pub fn populate_grid(trigger: On<Add, grid::Grid>, mut commands: Commands, textures: Res<Textures>, query: Query<(&mut grid::Grid, &mut grid::GridScale)>) {
+    let entity = trigger.event_target();
+    if let Ok((grid, grid_scale)) = query.get(entity) {
+        let scale = textures.tile.scale();
+        grid_scale.scale = scale;
         for transform in grid
             .grid
-            .iter_to_transform(grid.grid.iter_entire_grid(), sprites.scale)
+            .iter_to_transform(grid.grid.iter_entire_grid(), textures.scale)
         {
             commands.spawn((
                 Tile {},
                 Sprite {
-                    // color: Color::hsl(120.0, 0.3, 0.5),
-                    ..sprites.tile_sprite()
+                    ..textures.tile_sprite()
                 },
                 Transform::from_translation(transform),
                 Name::new("Tile"),
@@ -27,14 +29,15 @@ pub fn populate(mut commands: Commands, grid_query: Query<&mut grid::Grid>, spri
 }
 
 #[derive(Component, Clone, Debug, Reflect)]
-pub struct Tile {}
+pub struct GridScale {
+    pub scale: Vec2,
+}
 
-// pub fn color(mut query: Query<&mut Sprite, With<Tile>>, time: Res<Time>) {
-//     for mut sprite in query.iter_mut() {
-//         let mut hue = sprite.color.hue() + time.delta_secs() * 10.0;
-//         if hue >= 360.0 {
-//             hue -= 360.0;
-//         }
-//         sprite.color.set_hue(hue);
-//     }
-// }
+impl GridScale {
+    pub fn new(scale: Vec2) -> Self {
+        GridScale { scale }
+    }
+}
+
+#[derive(Component, Clone, Debug, Reflect)]
+pub struct Tile {}

@@ -25,7 +25,7 @@ fn unit_health_gizmo(
     mut gizmos: Gizmos,
     unit_query: Query<(&grid::GridLocation, &unit::Health), With<unit::Unit>>,
     grid_query: Query<(&Transform, &grid::Grid, &grid::GridOwned)>,
-    sprites: Res<theme::Sprites>,
+    sprites: Res<theme::Textures>,
 ) {
     for (transform, grid, owned) in grid_query.iter() {
         for (location, health) in unit_query.iter_many(owned.iter()) {

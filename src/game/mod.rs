@@ -11,7 +11,7 @@ mod tiles;
 mod unit;
 mod utils;
 
-use crate::theme::Sprites;
+use crate::theme::Textures;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_plugins(animate::plugin);
@@ -27,7 +27,7 @@ pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_systems(Startup, (init, tiles::populate).chain());
 }
 
-fn init(mut commands: Commands, sprites: Res<Sprites>) {
+fn init(mut commands: Commands, sprites: Res<Textures>) {
     let root = commands.spawn_empty().id();
     let size = IVec2::new(40, 40);
     let mut grid = grid::Grid::new(size);

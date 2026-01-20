@@ -5,7 +5,6 @@ use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 pub mod game;
-pub mod merchant;
 pub mod random;
 pub mod theme;
 pub mod util;
