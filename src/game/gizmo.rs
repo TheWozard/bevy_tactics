@@ -1,7 +1,5 @@
-use bevy::math::VectorSpace;
 use bevy::prelude::*;
 
-use super::grid;
 use super::unit;
 
 const HEALTH_COLOR: Color = Color::srgb(0.0, 1.0, 0.0);

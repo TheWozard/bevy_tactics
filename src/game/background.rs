@@ -1,4 +1,3 @@
-use bevy::math::VectorSpace;
 use bevy::prelude::*;
 use bevy::reflect::TypePath;
 use bevy::render::render_resource::AsBindGroup;
