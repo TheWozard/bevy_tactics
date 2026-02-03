@@ -57,17 +57,6 @@ fn despawn_on_zero_health(
 }
 
 #[derive(Component, Clone, Debug, Reflect)]
-pub struct Speed {
-    pub value: u32,
-}
-
-impl Speed {
-    pub fn new(value: u32) -> Self {
-        Speed { value }
-    }
-}
-
-#[derive(Component, Clone, Debug, Reflect)]
 pub struct Attacks {
     pub damage: u32,
     pub range: f32,

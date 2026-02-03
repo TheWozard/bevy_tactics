@@ -1,9 +1,10 @@
-use bevy::prelude::*;
-use pathfinding::prelude::astar;
 use std::collections::VecDeque;
 
-use crate::util::cords;
+use bevy::prelude::*;
+use pathfinding::prelude::astar;
+
 use super::selection;
+use crate::util::cords;
 
 // Grid is a 2D fixed-size grid that stores values of type T.
 #[derive(Clone, Debug, Reflect)]
@@ -13,7 +14,7 @@ pub struct Grid<T: Default> {
 }
 
 impl<T: Default> Grid<T> {
-    // Creates a new Grid with the specified size. Negative sizes are treated as positive.
+    // Creates a new Grid with the specified size.
     pub fn new(size: IVec2) -> Self {
         let mut data = Vec::<T>::new();
         data.resize_with((size.x * size.y) as usize, || T::default());
@@ -66,26 +67,37 @@ impl<T: Default> Grid<T> {
         }
     }
 
+    pub fn iter_in_order(&self) -> impl Iterator<Item = IVec2> {
+        let size = self.size;
+        (0..self.data.len()).map(move |i| cords::index_to_location(&size, i))
+    }
+
     // Breath-first iterator that explores the grid breath-first from a starting point starting in a given direction.
-    pub fn iter(
+    pub fn iter_breath(
         &self,
-        start: &IVec2,
-        direction: &IVec2,
+        start: IVec2,
+        direction: IVec2,
         selection: selection::Shape,
-    ) -> impl Iterator<Item = usize> + '_ {
+    ) -> impl Iterator<Item = IVec2> {
         let mut queue = VecDeque::with_capacity(self.data.len());
         queue.push_back(start.clone());
         let mut visited = vec![false; self.data.len()];
         let size = self.size;
-        let len = self.data.len();
-        let dir = direction.clone();
+        let dir = if direction == IVec2::ZERO {
+            IVec2::new(1, 0)
+        } else {
+            direction
+        };
         let rotated = IVec2::new(-direction.y, direction.x); // Rotate direction 90 degrees clockwise
         std::iter::from_fn(move || {
             while let Some(location) = queue.pop_front() {
-                let index = cords::location_to_index(&size, &location);
-                if index >= len {
+                if location.x < 0 || location.y < 0 {
                     continue;
                 }
+                if location.x >= size.x || location.y >= size.y {
+                    continue;
+                }
+                let index = cords::location_to_index(&size, &location);
                 if !visited[index] && selection.contains(&location) {
                     visited[index] = true;
                     queue.extend(
@@ -95,9 +107,9 @@ impl<T: Default> Grid<T> {
                             location - dir,
                             location - rotated,
                         ]
-                        .into_iter()
+                        .into_iter(),
                     );
-                    return Some(index);
+                    return Some(location);
                 }
             }
             None
@@ -105,49 +117,40 @@ impl<T: Default> Grid<T> {
     }
 
     // A* pathfinding algorithm to find a path from start to end.
-    pub fn a_star(
-        &self,
-        start: &IVec2,
-        end: &IVec2,
-        valid: impl Fn(Option<&T>) -> bool,
-    ) -> Vec<IVec2> {
+    pub fn a_star(&self, start: &IVec2, end: &IVec2, valid: impl Fn(&T) -> bool) -> Vec<IVec2> {
         if let Some((path, _)) = astar(
             start,
             |p| {
-                let mut successors = Vec::new();
-                for dir in [
-                    IVec2::new(1, 0),
-                    IVec2::new(-1, 0),
-                    IVec2::new(0, 1),
-                    IVec2::new(0, -1),
-                ] {
-                    let next = p + dir;
-                    if self.within(&next) && (&next == end || valid(self.get(&next))) {
-                        successors.push((next, 1));
+                vec![
+                    p + IVec2::new(1, 0),
+                    p + IVec2::new(-1, 0),
+                    p + IVec2::new(0, 1),
+                    p + IVec2::new(0, -1),
+                ]
+                .into_iter()
+                .filter(|location| {
+                    if location == end {
+                        return true;
                     }
-                }
-                successors
+                    if let Some(cell) = self.get(location) {
+                        return valid(cell);
+                    }
+                    false
+                })
+                .map(move |location| (location, 1))
             },
             |p| p.distance_squared(*end),
             |p| p == end,
         ) {
-            path.into_iter().collect()
+            path
         } else {
-            Vec::new() // Return an empty path if no path is found
+            Vec::new()
         }
     }
 
     fn index(&self, location: &IVec2) -> Option<usize> {
         if cords::location_within(&IVec2::ZERO, &self.size, location) {
             Some(cords::location_to_index(&self.size, location))
-        } else {
-            None
-        }
-    }
-
-    fn location(&self, index: usize) -> Option<IVec2> {
-        if index < self.data.len() {
-            Some(cords::index_to_location(&self.size, index))
         } else {
             None
         }
@@ -185,24 +188,22 @@ mod test_grid {
     #[test]
     fn test_size() {
         assert_eq!(Grid::<()>::new(IVec2::new(3, 3)).size(), IVec2::new(3, 3));
-        assert_eq!(Grid::<()>::new(IVec2::new(-1, -1)).size(), IVec2::new(1, 1));
-        assert_eq!(Grid::<()>::new(IVec2::new(3, -1)).size(), IVec2::new(3, 1));
-        assert_eq!(Grid::<()>::new(IVec2::new(0, 0)).size(), IVec2::new(0, 0));
     }
 
     #[test]
     fn test_get_set_take() {
-        let mut grid = Grid::new(IVec2::new(3, 3));
-        assert_eq!(grid.get(&IVec2::new(0, 0)), None);
-        assert_eq!(grid.set(&IVec2::new(0, 0), 42), Some(&42));
-        assert_eq!(grid.get(&IVec2::new(0, 0)), Some(&42));
-        assert_eq!(grid.take(&IVec2::new(0, 0)), Some(42));
-        assert_eq!(grid.get(&IVec2::new(0, 0)), None);
+        let mut grid = Grid::<i32>::new(IVec2::new(3, 3));
+        assert_eq!(grid.get(&IVec2::new(0, 0)), Some(&0));
+        assert_eq!(grid.set(&IVec2::new(0, 0), 1), Some(&1));
+        assert_eq!(grid.get(&IVec2::new(0, 0)), Some(&1));
+        assert_eq!(grid.take(&IVec2::new(0, 0)), Some(1));
+        assert_eq!(grid.get(&IVec2::new(0, 0)), Some(&0));
+        assert_eq!(grid.get(&IVec2::new(-1, 0)), None);
     }
 
     #[test]
     fn test_a_star() {
-        let grid = Grid::<()>::new(IVec2::new(5, 5));
+        let grid = Grid::<Option<()>>::new(IVec2::new(5, 5));
         let path = grid.a_star(&IVec2::new(0, 0), &IVec2::new(4, 4), |cell| cell.is_none());
         assert_eq!(path.len(), 9); // Should find a path of length 9
         assert_eq!(path[0], IVec2::new(0, 0));
@@ -215,36 +216,34 @@ mod test_iter {
     use super::*;
 
     #[test]
-    fn test_iter_breath_first() {
+    fn test_iter() {
         let grid = Grid::<()>::new(IVec2::new(3, 3));
-        let mut iter =
-            grid.iter(&IVec2::new(1, 1), &IVec2::new(1, 0), selection::Shape::All);
-        assert_eq!(iter.next(), Some(4)); // (1, 1)
-        assert_eq!(iter.next(), Some(5)); // (2, 1)
-        assert_eq!(iter.next(), Some(7)); // (1, 2)
-        assert_eq!(iter.next(), Some(3)); // (0, 1)
-        assert_eq!(iter.next(), Some(1)); // (1, 0)
-        assert_eq!(iter.next(), Some(8)); // (2, 2)
-        assert_eq!(iter.next(), Some(2)); // (2, 0)
-        assert_eq!(iter.next(), Some(6)); // (0, 2)
-        assert_eq!(iter.next(), Some(0)); // (0, 0)
+        let mut iter = grid.iter_breath(IVec2::new(1, 1), IVec2::new(1, 0), selection::Shape::All);
+        assert_eq!(iter.next(), Some(IVec2::new(1, 1)));
+        assert_eq!(iter.next(), Some(IVec2::new(2, 1)));
+        assert_eq!(iter.next(), Some(IVec2::new(1, 2)));
+        assert_eq!(iter.next(), Some(IVec2::new(0, 1)));
+        assert_eq!(iter.next(), Some(IVec2::new(1, 0)));
+        assert_eq!(iter.next(), Some(IVec2::new(2, 2)));
+        assert_eq!(iter.next(), Some(IVec2::new(2, 0)));
+        assert_eq!(iter.next(), Some(IVec2::new(0, 2)));
+        assert_eq!(iter.next(), Some(IVec2::new(0, 0)));
         assert_eq!(iter.next(), None);
     }
 
     #[test]
-    fn test_iter_breath_first_corner() {
+    fn test_iter_corner() {
         let grid = Grid::<()>::new(IVec2::new(3, 3));
-        let mut iter =
-            grid.iter(&IVec2::new(0, 0), &IVec2::new(1, 0), selection::Shape::All);
-        assert_eq!(iter.next(), Some(0)); // (0, 0)
-        assert_eq!(iter.next(), Some(1)); // (1, 0)
-        assert_eq!(iter.next(), Some(3)); // (0, 1)
-        assert_eq!(iter.next(), Some(2)); // (2, 0)
-        assert_eq!(iter.next(), Some(4)); // (1, 1)
-        assert_eq!(iter.next(), Some(6)); // (0, 2)
-        assert_eq!(iter.next(), Some(5)); // (2, 1)
-        assert_eq!(iter.next(), Some(7)); // (1, 2)
-        assert_eq!(iter.next(), Some(8)); // (2, 2)
+        let mut iter = grid.iter_breath(IVec2::new(0, 0), IVec2::new(1, 0), selection::Shape::All);
+        assert_eq!(iter.next(), Some(IVec2::new(0, 0)));
+        assert_eq!(iter.next(), Some(IVec2::new(1, 0)));
+        assert_eq!(iter.next(), Some(IVec2::new(0, 1)));
+        assert_eq!(iter.next(), Some(IVec2::new(2, 0)));
+        assert_eq!(iter.next(), Some(IVec2::new(1, 1)));
+        assert_eq!(iter.next(), Some(IVec2::new(0, 2)));
+        assert_eq!(iter.next(), Some(IVec2::new(2, 1)));
+        assert_eq!(iter.next(), Some(IVec2::new(1, 2)));
+        assert_eq!(iter.next(), Some(IVec2::new(2, 2)));
         assert_eq!(iter.next(), None);
     }
 }

@@ -1,3 +1,4 @@
+use bevy::math::VectorSpace;
 use bevy::prelude::*;
 use bevy::reflect::TypePath;
 use bevy::render::render_resource::AsBindGroup;
@@ -25,7 +26,7 @@ fn spawn_background(
             Color::srgb(0.0, 1.0, 0.0),
             Color::srgb(0.0, 0.0, 0.0),
         ))),
-        Transform::default().with_scale(Vec3::splat(10000.)),
+        Transform::from_translation(Vec2::ZERO.extend(-100.)).with_scale(Vec3::splat(10000.)),
         Name::new("Background"),
         ChildOf(entity),
     ));

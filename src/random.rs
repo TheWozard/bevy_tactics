@@ -3,6 +3,8 @@ use std::time;
 use bevy::prelude::*;
 use rand::Rng;
 use rand::SeedableRng;
+use rand::distr::Distribution;
+use rand::distr::StandardUniform;
 use rand::distr::uniform::SampleRange;
 use rand::distr::uniform::SampleUniform;
 use rand_chacha::ChaCha8Rng;
@@ -59,6 +61,13 @@ impl RandomSource {
 
     pub fn color(&mut self) -> Color {
         Color::hsv(self.0.random_range(0.0..255.0), 1.0, 1.0)
+    }
+
+    pub fn random<T>(&mut self) -> T
+    where
+        StandardUniform: Distribution<T>,
+    {
+        self.0.random()
     }
 }
 

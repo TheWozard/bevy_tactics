@@ -40,3 +40,11 @@ pub fn location_to_index(size: &IVec2, location: &IVec2) -> usize {
 pub fn location_within(start: &IVec2, end: &IVec2, location: &IVec2) -> bool {
     location.x >= start.x && location.x < end.x && location.y >= start.y && location.y < end.y
 }
+
+// Translation
+
+#[inline]
+// Converts a 2D grid location to a 3D world position.
+pub fn location_to_translation(location: &IVec2, scale: &IVec2, z: i32) -> Vec3 {
+    (location * scale).extend(z).as_vec3()
+}

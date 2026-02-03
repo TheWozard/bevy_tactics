@@ -1,41 +1,42 @@
-use bevy::{ecs::query, prelude::*};
+use bevy::prelude::*;
 
 use super::grid;
 use crate::theme::Textures;
+use crate::util::cords;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
     app.add_observer(populate_grid);
 }
 
-pub fn populate_grid(trigger: On<Add, grid::Grid>, mut commands: Commands, textures: Res<Textures>, query: Query<(&mut grid::Grid, &mut grid::GridScale)>) {
+pub fn populate_grid(
+    trigger: On<Add, grid::Grid>,
+    mut commands: Commands,
+    textures: Res<Textures>,
+    mut query: Query<(&mut grid::Grid, &grid::GridScale, Entity)>,
+) {
     let entity = trigger.event_target();
-    if let Ok((grid, grid_scale)) = query.get(entity) {
-        let scale = textures.tile.scale();
-        grid_scale.scale = scale;
-        for transform in grid
-            .grid
-            .iter_to_transform(grid.grid.iter_entire_grid(), textures.scale)
-        {
-            commands.spawn((
-                Tile {},
-                Sprite {
-                    ..textures.tile_sprite()
-                },
-                Transform::from_translation(transform),
-                Name::new("Tile"),
-            ));
+    if let Ok((mut grid, scale, entity)) = query.get_mut(entity) {
+        for index in 0..grid.spaces() {
+            let location = cords::index_to_location(&grid.size(), index as usize);
+            grid.spawn(
+                &mut commands,
+                &grid::EntityKind::Tile,
+                &location,
+                entity,
+                (
+                    Tile {},
+                    Sprite {
+                        ..textures.tile.sprite()
+                    },
+                    Transform::from_translation(cords::location_to_translation(
+                        &location,
+                        scale.scale(),
+                        -1,
+                    )),
+                    Name::new("Tile"),
+                ),
+            );
         }
-    }
-}
-
-#[derive(Component, Clone, Debug, Reflect)]
-pub struct GridScale {
-    pub scale: Vec2,
-}
-
-impl GridScale {
-    pub fn new(scale: Vec2) -> Self {
-        GridScale { scale }
     }
 }
 

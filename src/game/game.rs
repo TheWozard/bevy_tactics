@@ -5,15 +5,10 @@ use super::grid;
 use super::unit;
 use crate::game::animate::Lerp;
 use crate::game::effect;
-use crate::game::utils;
-use crate::theme;
 use crate::util::cords;
 
 pub fn plugin(app: &mut bevy::prelude::App) {
-    app.add_systems(
-        PreUpdate,
-        (TurnOrder::update_turn_order, TurnOrder::next_turn),
-    );
+    app.add_systems(PreUpdate, TurnOrder::next_turn);
 
     app.add_observer(do_turn);
     app.add_observer(do_move);
@@ -42,34 +37,16 @@ impl Default for TurnOrder {
 }
 
 impl TurnOrder {
-    pub fn update_turn_order(
-        mut turn_order: Query<(&mut TurnOrder, &grid::GridOwned), Changed<grid::GridOwned>>,
-        speed: Query<&unit::Speed>,
-    ) {
-        for (mut turn_order, grid_owned) in turn_order.iter_mut() {
-            turn_order.order.clear();
-            let mut ordered = Vec::new();
-            for entity in grid_owned.iter() {
-                if let Ok(speed) = speed.get(entity) {
-                    while ordered.len() < speed.value as usize {
-                        ordered.push(Vec::new());
-                    }
-                    ordered[(speed.value - 1) as usize].push(entity);
-                }
-            }
-            turn_order.order = vec![Vec::<Entity>::new(); ordered.len()];
-            for (i, entities) in ordered.iter().enumerate() {
-                if entities.len() > 0 {
-                    turn_order.order[i].extend(entities.iter());
-                    let mut multiple = 2;
-                    while multiple * (i + 1) < turn_order.order.len() {
-                        turn_order.order[multiple * (i + 1)].extend(entities.iter());
-                        multiple += 1;
-                    }
-                }
-            }
-            turn_order.order.retain(|v| !v.is_empty());
-            turn_order.index = turn_order.index % turn_order.order.len();
+    pub fn add_entity(&mut self, entity: Entity, index: usize) {
+        while self.order.len() < index + 1 {
+            self.order.push(Vec::new());
+        }
+        self.order[index].push(entity);
+    }
+
+    pub fn add_entity_optional(&mut self, entity: Option<Entity>, index: usize) {
+        if let Some(e) = entity {
+            self.add_entity(e, index);
         }
     }
 
@@ -91,74 +68,6 @@ impl TurnOrder {
         }
     }
 
-    // pub fn do_turn(
-    //     trigger: On<Turn>,
-    //     mut commands: Commands,
-    //     mut unit_query: Query<(
-    //         Entity,
-    //         &Transform,
-    //         &mut grid::GridLocation,
-    //         &unit::Movement,
-    //         &grid::GridOwner,
-    //         &unit::Unit,
-    //         &unit::Attacks,
-    //     )>,
-    //     mut target_query: Query<(&mut unit::Health, &unit::Unit)>,
-    //     mut grid_query: Query<&mut grid::Grid>,
-    //     search_query: Query<&unit::Unit>,
-    //     sprites: Res<theme::Sprites>,
-    // ) {
-    //     let event = trigger.event();
-    //     if let Ok((entity, transform, mut grid_location, movement, grid_owner, unit, attacks)) =
-    //         unit_query.get_mut(event.entity)
-    //     {
-    //         if let Ok(mut grid) = grid_query.get_mut(grid_owner.get()) {
-    //             let location = grid_location.as_ivec2();
-    //             if let Some(nearest) = grid.find(location, &IVec2::ONE, |entity| {
-    //                 if let Ok(search) = search_query.get(entity) {
-    //                     search.team != unit.team
-    //                 } else {
-    //                     false
-    //                 }
-    //             }) {
-    //                 if nearest.distance_squared(*location) <= 1 {
-    //                     if let Some(target) = grid.get(&nearest) {
-    //                         if let Ok((mut health, target)) = target_query.get_mut(target) {
-    //                             if target.team != unit.team {
-    //                                 health.damage(1 * attacks.damage);
-    //                                 let source = transform.translation.truncate();
-    //                                 let target =
-    //                                     grid.grid.location_to_vec2(&nearest, sprites.scale);
-    //                                 commands.trigger(effect::Effect::Damage(
-    //                                     cords::percent_between(source, target, 0.25),
-    //                                     cords::percent_between(source, target, 0.75),
-    //                                 ));
-    //                             }
-    //                         }
-    //                     }
-    //                 } else {
-    //                     if let Some((location, steps)) =
-    //                         grid.a_star_move(location, &nearest, movement.spaces as usize)
-    //                     {
-    //                         commands.entity(entity).insert(Lerp::new(
-    //                             steps
-    //                                 .iter()
-    //                                 .map(|loc| {
-    //                                     grid.grid
-    //                                         .location_to_vec2(loc, sprites.scale)
-    //                                         .extend(transform.translation.z)
-    //                                 })
-    //                                 .collect(),
-    //                             0.2,
-    //                         ));
-    //                         *grid_location = location;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
     pub fn get_next_entity(&mut self) -> Option<&Vec<Entity>> {
         if self.order.is_empty() {
             return None;
@@ -178,26 +87,27 @@ fn do_turn(
 ) {
     if let Ok((location, unit, attacks)) = unit_query.get(trigger.event_target()) {
         if let Ok(grid) = grid_query.single() {
-            if let Some(target_location) = grid.find(
-                location.as_ivec2(),
+            if let Some(target_location) = grid.nearest_entity(
+                &super::grid::EntityKind::Unit,
+                location.location(),
                 &IVec2::ONE,
-                utils::SelectionShape::All,
+                grid::selection::Shape::All,
                 |entity| {
-                    if let Ok(target_unit) = target_query.get(entity) {
-                        target_unit.team != unit.team
-                    } else {
-                        false
-                    }
+                    target_query
+                        .get(entity.clone())
+                        .map_or(false, |u| u.team != unit.team)
                 },
             ) {
                 if target_location
                     .as_vec2()
-                    .distance_squared(location.as_vec2())
+                    .distance_squared(location.location().as_vec2())
                     <= attacks.range * attacks.range
                 {
                     commands.trigger(Attack {
                         entity: trigger.event_target(),
-                        target: grid.get(&target_location).unwrap(),
+                        target: grid
+                            .get_entity(&super::grid::EntityKind::Unit, &target_location)
+                            .unwrap(),
                     });
                 } else {
                     commands.trigger(Move {
@@ -219,37 +129,39 @@ pub struct Move {
 fn do_move(
     trigger: On<Move>,
     mut commands: Commands,
-    unit_query: Query<(
+    mut unit_query: Query<(
+        &mut grid::GridLocation,
         &Transform,
-        &grid::GridLocation,
         &unit::Movement,
         &grid::GridOwner,
     )>,
-    mut grid_query: Query<&mut grid::Grid>,
-    sprites: Res<theme::Textures>,
+    mut grid_query: Query<(&mut grid::Grid, &grid::GridScale)>,
 ) {
-    if let Ok((transform, location, movement, grid_owner)) = unit_query.get(trigger.event_target())
+    if let Ok((mut location, transform, movement, grid_owner)) =
+        unit_query.get_mut(trigger.event_target())
     {
-        if let Ok(mut grid) = grid_query.get_mut(grid_owner.get()) {
-            if let Some((new_location, steps)) = grid.a_star_move(
-                location.as_ivec2(),
+        if let Ok((mut grid, grid_scale)) = grid_query.get_mut(grid_owner.get()) {
+            let steps = grid.a_star_next_to(
+                &super::grid::EntityKind::Unit,
+                location.location(),
                 &trigger.event().towards,
                 movement.spaces as usize,
-            ) {
-                commands.entity(trigger.event_target()).insert((
-                    new_location,
-                    Lerp::new(
-                        steps
-                            .iter()
-                            .map(|loc| {
-                                grid.grid
-                                    .location_to_vec2(loc, sprites.scale)
-                                    .extend(transform.translation.z)
-                            })
-                            .collect(),
-                        0.2,
-                    ),
-                ));
+            );
+            if steps.len() > 1 {
+                grid.move_to(&mut location, steps.last().unwrap());
+                commands.entity(trigger.event_target()).insert((Lerp::new(
+                    steps
+                        .iter()
+                        .map(|loc| {
+                            cords::location_to_translation(
+                                loc,
+                                grid_scale.scale(),
+                                transform.translation.z as i32,
+                            )
+                        })
+                        .collect(),
+                    0.2,
+                ),));
             }
         }
     }
