@@ -90,7 +90,7 @@ fn do_turn(
             if let Some(target_location) = grid.nearest_entity(
                 &super::grid::EntityKind::Unit,
                 location.location(),
-                &IVec2::ONE,
+                &IVec2::new(1, 0),
                 grid::selection::Shape::All,
                 |entity| {
                     target_query

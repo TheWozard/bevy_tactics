@@ -17,8 +17,8 @@ fn unit_health_gizmo(
     for (transform, sprite, health) in unit_query.iter() {
         let size = sprite.custom_size.unwrap_or(Vec2::ZERO);
         let location = transform.translation.xy()
-            - Vec2::new(size.x / 2.0, size.y / 2.0)
-            - Vec2::new(0.0, 10.0);
+            + Vec2::new(size.x / -2.0, size.y / 2.0)
+            + Vec2::new(0.0, size.y / 10.0);
         let width = size.x;
         let percent = health.percent();
         if percent < 1.0 {
