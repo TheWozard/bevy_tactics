@@ -35,6 +35,10 @@ fn init(mut commands: Commands, sprites: Res<Textures>, mut rand: ResMut<RandomS
     let scale = grid::GridScale::new(sprites.tile.scale().as_ivec2());
     let mut turns = game::TurnOrder::default();
 
+    commands.trigger(camera::MoveCameraEvent::new(
+        size.as_vec2() * scale.scale().as_vec2() * 0.5,
+    ));
+
     let step_range = 2..4;
 
     let spawn_space = IVec2::new(size.x, size.y / 3);

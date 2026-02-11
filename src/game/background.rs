@@ -29,8 +29,9 @@ fn spawn_background(
         Mesh2d(meshes.add(Rectangle::default())),
         MeshMaterial2d(materials.add(BackgroundMaterial::new(
             rand.as_mut(),
-            Color::srgb(0.0, 1.0, 0.0),
-            Color::srgb(0.0, 0.0, 0.0),
+            Color::srgb_u8(6, 30, 41),
+            Color::srgb_u8(29, 84, 109),
+            Color::srgb_u8(95, 149, 152),
         ))),
         Transform::from_translation(Vec2::ZERO.extend(-100.)),
         Name::new("Background"),
@@ -58,9 +59,11 @@ struct BackgroundMaterial {
     #[uniform(0)]
     seed: f32,
     #[uniform(1)]
-    highlight: LinearRgba,
-    #[uniform(2)]
     base: LinearRgba,
+    #[uniform(2)]
+    highlight: LinearRgba,
+    #[uniform(3)]
+    accent: LinearRgba,
 }
 
 impl Material2d for BackgroundMaterial {
@@ -70,11 +73,12 @@ impl Material2d for BackgroundMaterial {
 }
 
 impl BackgroundMaterial {
-    fn new(rand: &mut RandomSource, highlight: Color, base: Color) -> Self {
+    fn new(rand: &mut RandomSource, highlight: Color, base: Color, accent: Color) -> Self {
         BackgroundMaterial {
             seed: rand.random(),
             highlight: highlight.to_linear(),
             base: base.to_linear(),
+            accent: accent.to_linear(),
         }
     }
 }

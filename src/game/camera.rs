@@ -107,7 +107,7 @@ fn camera_zoom(
                         MouseScrollUnit::Pixel => event.y * 0.001,
                     };
                     ortho.scale -= scroll_amount;
-                    ortho.scale = ortho.scale.clamp(0.1, 10.0);
+                    ortho.scale = ortho.scale.clamp(1.0, 2.0);
                 }
             }
             _ => {}

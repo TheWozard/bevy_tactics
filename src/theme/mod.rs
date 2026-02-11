@@ -49,11 +49,8 @@ pub struct Textures {
 }
 
 impl Textures {
-    fn load(
-        mut commands: Commands,
-        asset_server: Res<AssetServer>,
-    ) {
-        let scale = 16.0;
+    fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
+        let scale = 32.0;
         commands.insert_resource(Textures {
             attack: Texture {
                 handle: asset_server.load("tiles/attack.png"),

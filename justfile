@@ -8,4 +8,4 @@ test:
     cargo test --message-format short
 
 assets:
-    bash scripts/convert_svg_to_png.sh 16 assets/tiles
+    bash scripts/convert_svg_to_png.sh 32 assets/tiles
